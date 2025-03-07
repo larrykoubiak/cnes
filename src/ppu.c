@@ -27,7 +27,7 @@ int ppu_init(PPU* ppu, Bus* bus, MirroringMode mode) {
 
 void ppu_reset(PPU* ppu) {
     memset(&ppu->vram,0,0x2000);
-    memset(&ppu->oam,0,sizeof(OAMRAM));
+    memset(&ppu->oam,0xFF,sizeof(OAMRAM));
     memset(&ppu->secondary_oam,0,sizeof(Sprite)*8);
     memset(&ppu->palette,0,0x20);
     memset(&ppu->pixel_buffer,0,0x100);
@@ -194,11 +194,10 @@ void ppu_write(PPU* ppu, uint16_t address, uint8_t value) {
 }
 
 void ppu_step(PPU* ppu) {
-    if (0 <= ppu->scanline < 240) {
+    if (ppu->scanline >= 0 && ppu->scanline < 240) {
         if (ppu->cycle == 0) {
             evaluate_sprites(ppu);
-        }
-        if (ppu->cycle == 340) {
+        } else if (ppu->cycle == 340) {
             if (ppu->ppumask.BG_RENDER == 1) {
                 render_scanline(ppu);
             }
@@ -217,7 +216,7 @@ void ppu_step(PPU* ppu) {
         }
     } else if (ppu->scanline == 261) {
         if (ppu->cycle == 0) {
-            evaluate_sprites(ppu);
+            //evaluate_sprites(ppu);
             ppu->frame_odd = !ppu->frame_odd;
         } else if (ppu->cycle == 1) {
             ppu->ppustatus.VBLANK = 0;
@@ -294,15 +293,17 @@ void render_scanline(PPU* ppu) {
 }
 
 void evaluate_sprites(PPU* ppu) {
-    uint8_t i, yrange;
+    int i, yrange;
     uint8_t sprite_height;
+    Sprite sprite;
     sprite_height = 8 << ppu->ppuctrl.SPRITESIZE;
     ppu->sprite_count = 0;
     for (i=0; i<64; i++) {
-        yrange = ppu->scanline - ppu->oam.sprites[i].y;
-        if (0 <= yrange < sprite_height) {
+        sprite = ppu->oam.sprites[i];
+        yrange = ppu->scanline - sprite.y;
+        if (yrange >=0 && yrange < sprite_height) {
             if (ppu->sprite_count < 8) {
-                ppu->secondary_oam[ppu->sprite_count] = ppu->oam.sprites[i];
+                ppu->secondary_oam[ppu->sprite_count] = sprite;
                 ppu->sprite_count += 1;
             } else {
                 ppu->ppustatus.SP_OVERFLOW = 1;
@@ -319,6 +320,9 @@ void render_sprites(PPU* ppu) {
     int sprite_height = ppu->ppuctrl.SPRITESIZE == 0 ? 8 : 16;
     for (i=0; i<ppu->sprite_count; i++) {
         sprite = ppu->secondary_oam[i];
+        if(sprite.y > 240) {
+            continue;
+        }
         y_offset = ppu->scanline - sprite.y;
         if (sprite.attr.flip_v) {
             y_offset = (sprite_height - 1) - y_offset;

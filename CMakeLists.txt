@@ -1,18 +1,52 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.30)
 project(cnes C)
-set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_DEBUGGER "gdb")
-set(CMAKE_C_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
 
-add_executable(cnes
-    main.c
-    cpu.c
-    bus.c
-    ines.c
-    mapper.c
-    cartridge.c
-    ppu.c
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+# CPM
+file(
+  DOWNLOAD
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.38.3/CPM.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+  EXPECTED_HASH SHA256=cc155ce02e7945e7b8967ddfaff0b050e958a723ef7aad3766d368940cb15494
+)
+include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+
+set(LIBS)
+
+set(CNES_SOURCES
+    src/main.c
+    src/cpu.c
+    src/bus.c
+    src/ines.c
+    src/mapper.c
+    src/cartridge.c
+    src/ppu.c
+    src/sdl_context.c
+)
+
+CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")
+
+set(SDL3_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl-build/SDL3.dll")
+message(STATUS "SDL3.dll expected at: ${SDL3_DLL_PATH}")
+if(NOT EXISTS "${SDL3_DLL_PATH}")
+    message(FATAL_ERROR "SDL3.dll not found at ${SDL3_DLL_PATH}. Build SDL3 as SHARED or check the correct path.")
+endif()
+
+list(APPEND LIBS SDL3::SDL3-shared)
+
+add_executable(${PROJECT_NAME} ${CNES_SOURCES})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${SDL3_DLL_PATH} ${CMAKE_BINARY_DIR}/SDL3.dll
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_SOURCE_DIR}/2C02G_wiki.pal ${CMAKE_BINARY_DIR}/2C02G_wiki.pal
 )
