@@ -125,9 +125,9 @@ MirroringMode cart_get_mirroring_mode(const iNESHeader* header) {
     }
     switch(header->nametable_layout) {
         case HORIZONTAL_LAYOUT:
-            return HORIZONTAL;
-        case VERTICAL_LAYOUT:
             return VERTICAL;
+        case VERTICAL_LAYOUT:
+            return HORIZONTAL;
         default:
             return HORIZONTAL;
     }

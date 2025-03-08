@@ -98,7 +98,7 @@ void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value) {
         case 5:
             if (ppu->w == 0) {
                 ppu->x = value & 0x07;
-                ppu->t.coarse_x = (value >> 3);
+                ppu->t.coarse_x = (value >> 3) & 0x1F;
             } else {
                 ppu->t.fine_y = value & 0x07;
                 ppu->t.coarse_y = (value >> 3) & 0x1F;
@@ -163,27 +163,22 @@ void ppu_write(PPU* ppu, uint16_t address, uint8_t value) {
     if (address < 0x2000) {
         ppu->bus->cart.mapper->write_chr(&ppu->bus->cart, address & 0x1FFF, value);
     } else if (address < 0x3F00) {
-        address = address & 0x0FFF;
-        if (ppu->mirroring == HORIZONTAL) {
-            if (address >= 0x0800) {
-                address -= 0x0800;
-            }
-            if (address >= 0x0400) {
-                address -= 0x0400;
-            }
-        } else if (ppu->mirroring == VERTICAL) {
-            if (address >= 0x0800) {
-                address -= 0x0800;
-            }
-            if (address >= 0x0400 && address < 0x0800) {
-                address -= 0x0400;
-            }
+        uint16_t mirrored = (address - 0x2000) & 0x0FFF;
+        if (ppu->mirroring == VERTICAL) {
+            // Write to both vertical-mirrored regions
+            ppu->vram[(mirrored & 0x07FF)] = value;  // Base region
+            ppu->vram[(mirrored & 0x07FF) + 0x0800] = value;  // Mirrored region
+        } else if (ppu->mirroring == HORIZONTAL) {
+            // Write to both horizontal-mirrored regions
+            ppu->vram[(mirrored & 0x03FF)] = value;  // Base region
+            ppu->vram[(mirrored & 0x03FF) + 0x0400] = value;  // Mirrored region
         } else if (ppu->mirroring == SINGLE_SCREEN_LOWER) {
-            address = address & 0x03FF;
+            // Everything mirrors to lower nametable
+            ppu->vram[(mirrored & 0x03FF)] = value;
         } else if (ppu->mirroring == SINGLE_SCREEN_UPPER) {
-            address = (address & 0x03FF) + 0x0400;
+            // Everything mirrors to upper nametable
+            ppu->vram[(mirrored & 0x03FF) + 0x0400] = value;
         }
-        ppu->vram[address] = value;
     } else if (address < 0x4000) {
         address = address & 0x1F;
         if (address == 0x10) {
@@ -213,6 +208,7 @@ void ppu_step(PPU* ppu) {
         if (ppu->cycle == 1) {
             ppu->ppustatus.VBLANK = 1;
             ppu_trigger_nmi(ppu);
+            ppu->vblank_triggered = 1;
         }
     } else if (ppu->scanline == 261) {
         if (ppu->cycle == 0) {
@@ -222,6 +218,7 @@ void ppu_step(PPU* ppu) {
             ppu->ppustatus.VBLANK = 0;
             ppu->ppustatus.SP0_HIT = 0;
             memset(&ppu->framebuffer, 0, (0xF000));
+            ppu->v.value = ppu->t.value;
         }
     }
     ppu->cycle += 1;
@@ -231,6 +228,7 @@ void ppu_step(PPU* ppu) {
         if (ppu->scanline >= 262) {
             ppu->frame_count += 1;
             ppu->scanline = 0;
+            ppu->vblank_triggered = 0;
         }
     }
 }
@@ -247,12 +245,10 @@ void render_scanline(PPU* ppu) {
     uint16_t nametable_address, attribute_address, tile_address;
     uint8_t nametable_byte, attribute_byte, tile_low_byte, tile_high_byte;
     LOOPYRegister v_copy = ppu->v;
-    unsigned int coarse_x = ppu->v.coarse_x;
-    unsigned int nametable = ppu->v.nametable;
     fine_x = ppu->x;
     for (x=0; x<256;x++){
         // fetch nametable
-        nametable_address = 0x2000 | v_copy.value & 0xFFF;
+        nametable_address = 0x2000 | (v_copy.nametable << 10) | ((v_copy.coarse_y & 0x1F) << 5) | (v_copy.coarse_x & 0x1F);
         nametable_byte = ppu_read(ppu, nametable_address);
         // fetch attribute
         attribute_address = 0x2000 | (v_copy.nametable << 10) | 0x3C0 | ((v_copy.coarse_y >> 2) << 3) | (v_copy.coarse_x >> 2);
@@ -284,8 +280,6 @@ void render_scanline(PPU* ppu) {
         if (ppu->v.coarse_y == 29) {
             ppu->v.coarse_y = 0;
             ppu->v.nametable ^= 2;
-        } else if (ppu->v.coarse_y == 31) {
-            ppu->v.coarse_y = 0;
         } else {
             ppu->v.coarse_y += 1;
         }

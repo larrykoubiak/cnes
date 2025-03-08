@@ -113,6 +113,7 @@ typedef struct PPU {
     uint8_t open_bus_val;
     uint64_t frame_count;
     uint8_t sprite_count;
+    bool vblank_triggered;
 } PPU;
 
 // Function declarations
