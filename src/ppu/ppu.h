@@ -3,7 +3,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "cartridge.h"
+
+typedef struct Bus Bus;
+
+typedef enum {
+    HORIZONTAL = 0,
+    VERTICAL = 1,
+    FOUR_SCREEN = 8,
+    SINGLE_SCREEN_LOWER = 9,
+    SINGLE_SCREEN_UPPER = 10
+} MirroringMode;
 
 typedef enum {
     LOAD_COLORS_OK = 0,
@@ -92,7 +101,7 @@ typedef struct PPU {
     uint8_t pixel_buffer[0x100];
     uint8_t framebuffer[0xF000];
     // Pointers
-    struct Bus* bus;
+    Bus* bus;
     // Registers ($2000-$2007)
     PPUCTRLRegister ppuctrl;
     PPUMASKRegister ppumask;
@@ -116,7 +125,6 @@ typedef struct PPU {
     bool vblank_triggered;
 } PPU;
 
-// Function declarations
 int ppu_init(PPU* ppu, struct Bus* bus, MirroringMode mode);
 void ppu_reset(PPU* ppu);
 uint8_t ppu_register_read(PPU* ppu, uint16_t address);
@@ -139,4 +147,5 @@ static inline uint16_t get_color_address(PPU* ppu, int pal_table_id, uint8_t pal
     uint16_t color_address = (((ppu->ppumask.value & 0xE0) >> 5) * 0XC0) + (color_id * 3);
     return color_address;
 }
+
 #endif

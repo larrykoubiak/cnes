@@ -1,9 +1,4 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include "cartridge.h"
-#include "ppu.h"
-#include "bus.h"
+#include "../bus.h"
 
 static LoadColorsResult load_colors(PPU* ppu, const char* filename) {
     FILE* f = fopen(filename, "rb");

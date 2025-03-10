@@ -1,8 +1,5 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
 #include "bus.h"
-#include "sdl_context.h"
+#include "frontend/sdl_context.h"
 
 int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
     if (argc < 2) {

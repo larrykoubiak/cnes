@@ -1,5 +1,3 @@
-#include <stdint.h>
-#include <string.h>
 #include "ines.h"
 
 iNESError parse_ines_header(uint8_t* data, iNESHeader* header){

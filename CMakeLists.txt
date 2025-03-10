@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
+cmake_policy(SET CMP0169 OLD)
 project(cnes C)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -18,13 +19,15 @@ set(LIBS)
 
 set(CNES_SOURCES
     src/main.c
-    src/cpu.c
+    src/cpu/cpu.c
+    src/cpu/addressing_modes.c
+    src/cpu/instructions.c
     src/bus.c
-    src/ines.c
-    src/mapper.c
-    src/cartridge.c
-    src/ppu.c
-    src/sdl_context.c
+    src/cartridge/ines.c
+    src/cartridge/mapper.c
+    src/cartridge/cartridge.c
+    src/ppu/ppu.c
+    src/frontend/sdl_context.c
 )
 
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")

@@ -1,4 +1,3 @@
-#include "mapper.h"
 #include "cartridge.h"
 
 void mapper000_init(Cartridge* cart) {

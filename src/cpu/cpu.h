@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "addressing_modes.h"
+#include "instructions.h"
+
+typedef struct Bus Bus;
 typedef struct CPU CPU;
 
 typedef uint16_t (*AddressModeFunc)(CPU* cpu);
@@ -37,14 +41,19 @@ typedef struct CPU {
     } P;
     char            disassembly[16];
     int             cycles;
-    struct Bus* bus;
+    Bus* bus;
     OpcodeDefinition opcode_table[256];
     bool            nmi_pending;
 } CPU;
+
+void _branch(CPU* cpu, int flag, int check, uint16_t address);
+uint8_t _read_PC_incr(CPU* cpu);
+void _stack_push(CPU* cpu, uint8_t value);
+uint8_t _stack_pull(CPU* cpu);
 
 int cpu_init(CPU* cpu, struct Bus* bus);
 void cpu_reset(CPU* cpu);
 int  cpu_step(CPU* cpu);
 void cpu_handle_nmi(CPU* cpu);
 
-#endif // CPU_H
+#endif

@@ -1,8 +1,4 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "cartridge.h"
-#include "mapper.h"
 
 int cart_init(Cartridge* cart, const char* filename) {
     LoadCartridgeResult result = cart_load(cart, filename);
@@ -116,19 +112,5 @@ void cart_free(Cartridge* cart) {
     }
     if (cart->chr_ram) {
         free(cart->chr_ram);
-    }
-}
-
-MirroringMode cart_get_mirroring_mode(const iNESHeader* header) {
-    if (header->alternate_layout) {
-        return FOUR_SCREEN;
-    }
-    switch(header->nametable_layout) {
-        case HORIZONTAL_LAYOUT:
-            return VERTICAL;
-        case VERTICAL_LAYOUT:
-            return HORIZONTAL;
-        default:
-            return HORIZONTAL;
     }
 }

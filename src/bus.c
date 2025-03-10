@@ -1,6 +1,3 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
 #include "bus.h"
 
 int init_bus(Bus* bus, const char* filename) {
@@ -104,4 +101,18 @@ void oam_dma(Bus* bus, uint8_t value) {
         bus->ppu.oam.raw[i] = bus->ram[ram_address + i];
     }
     bus->cycles += 514;
+}
+
+MirroringMode cart_get_mirroring_mode(const iNESHeader* header) {
+    if (header->alternate_layout) {
+        return FOUR_SCREEN;
+    }
+    switch(header->nametable_layout) {
+        case HORIZONTAL_LAYOUT:
+            return VERTICAL;
+        case VERTICAL_LAYOUT:
+            return HORIZONTAL;
+        default:
+            return HORIZONTAL;
+    }
 }
