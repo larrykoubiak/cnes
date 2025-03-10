@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ines.h"
-#include "mapper.h"
+#include "mapper/mapper.h"
+
+typedef struct Mapper Mapper;
 
 typedef struct Cartridge {
     iNESHeader header;

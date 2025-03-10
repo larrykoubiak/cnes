@@ -20,6 +20,16 @@ int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
 void step(Bus* bus) {
     uint16_t offset = bus->cpu.PC;
     bus_step(bus);
+    /*printf(
+         "0x%04X %s A:%02X X:%02X Y:%02X frame:%d scanline:%d\n",
+         offset,
+         bus->cpu.disassembly,
+         bus->cpu.A,
+         bus->cpu.X,
+         bus->cpu.Y,
+         bus->ppu.frame_count,
+         bus->ppu.scanline
+    );*/
 }
 
 int main(int argc, char *argv[]) {

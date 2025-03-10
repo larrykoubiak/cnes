@@ -1,4 +1,5 @@
 #include "cartridge.h"
+#include "mapper/mapper.h"
 
 int cart_init(Cartridge* cart, const char* filename) {
     LoadCartridgeResult result = cart_load(cart, filename);
@@ -97,10 +98,14 @@ LoadCartridgeResult cart_load(Cartridge* cart, const char* filename){
         cart->chr_ram_size = 0;
     }
     cart->mapper = get_mapper(header.mapper);
+    cart->mapper->init(cart);
     return LOAD_CARTRIDGE_OK;
 }
 
 void cart_free(Cartridge* cart) {
+    if (cart->mapper && cart->mapper->free) {
+        
+    }
     if (cart->prg_rom) {
         free(cart->prg_rom);
     }

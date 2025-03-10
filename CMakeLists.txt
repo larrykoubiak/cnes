@@ -24,9 +24,13 @@ set(CNES_SOURCES
     src/cpu/instructions.c
     src/bus.c
     src/cartridge/ines.c
-    src/cartridge/mapper.c
+    src/cartridge/mapper/mapper.c
+    src/cartridge/mapper/mapper_000.c
+    src/cartridge/mapper/mapper_001.c
+    src/cartridge/mapper/mapper_002.c
     src/cartridge/cartridge.c
     src/ppu/ppu.c
+    src/ppu/rendering.c
     src/frontend/sdl_context.c
 )
 

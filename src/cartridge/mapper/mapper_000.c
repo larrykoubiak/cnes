@@ -1,4 +1,5 @@
-#include "cartridge.h"
+#include "../cartridge.h"
+#include "mapper_000.h"
 
 void mapper000_init(Cartridge* cart) {
 }
@@ -22,12 +23,7 @@ Mapper MAPPER_000 = {
     .read_prg=mapper000_prg_read,
     .write_prg=mapper000_prg_write,
     .read_chr=mapper000_chr_read,
-    .write_chr=mapper000_chr_write
+    .write_chr=mapper000_chr_write,
+    .free=NULL,
+    .state=NULL
 };
-
-Mapper* get_mapper(uint16_t mapper_id){
-    if(mapper_id == 0) {
-        return &MAPPER_000;
-    }
-    return NULL;
-}

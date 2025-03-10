@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "rendering.h"
 
 typedef struct Bus Bus;
 
@@ -134,18 +135,6 @@ void ppu_write(PPU* ppu, uint16_t address, uint8_t value);
 void ppu_step(PPU* ppu);
 void ppu_trigger_nmi(PPU* ppu);
 void render_scanline(PPU* ppu);
-void evaluate_sprites(PPU* ppu);
-void render_sprites(PPU* ppu);
-void render_tile(PPU* ppu, uint8_t tile_id, uint8_t palette_id, int palette_table_id, int pattern_table_id, uint8_t* output_buffer );
-void render_nametable(PPU* ppu, uint8_t nametable_id, uint8_t* output_buffer);
-void render_patterntable(PPU* ppu, int table_id, uint8_t* output_buffer);
-void render_palettetable(PPU* ppu, uint8_t* output_buffer);
 
-static inline uint16_t get_color_address(PPU* ppu, int pal_table_id, uint8_t pal_id, uint8_t pixel ) {
-    uint16_t pal_idx = 0x3F00 + (((pal_table_id & 0x01) << 4) | ((pal_id & 0x03) << 2) | (pixel & 0x03));
-    uint8_t color_id = ppu_read(ppu, pal_idx);
-    uint16_t color_address = (((ppu->ppumask.value & 0xE0) >> 5) * 0XC0) + (color_id * 3);
-    return color_address;
-}
 
 #endif
