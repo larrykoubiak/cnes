@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.30)
-cmake_policy(SET CMP0169 OLD)
 project(cnes C)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -29,11 +28,13 @@ set(CNES_SOURCES
     src/cartridge/mapper/mapper_001.c
     src/cartridge/mapper/mapper_002.c
     src/cartridge/cartridge.c
+    src/input/input.c
     src/ppu/ppu.c
     src/ppu/rendering.c
     src/frontend/sdl_context.c
 )
 
+CPMAddPackage("gh:libusb/libusb#v1.0.27")
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")
 
 list(APPEND LIBS SDL3::SDL3-shared)
