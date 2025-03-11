@@ -1,13 +1,14 @@
 #include "../bus.h"
 
 void _instr_ADC(CPU* cpu, uint16_t address) {
-    uint8_t val = cpu_read(cpu->bus, address);
-    uint16_t result = cpu->A + val + cpu->P.C;
-    cpu->P.C = (result >> 8);
-    cpu->P.Z = (result == 0);
-    cpu->P.V = ((result ^ cpu->A) & (result ^ val) & 0x80) >> 7;
-    cpu->P.N = (result & 0x80) >> 7;
-    cpu->A = result & 0xFF;
+    uint8_t fetched = cpu_read(cpu->bus, address);
+    uint16_t value= ((uint16_t)fetched);
+    uint16_t result = (uint16_t)cpu->A + value + cpu->P.C;
+    cpu->P.C = (result & 0xFF00) ? 1 :0;
+    cpu->P.Z = ((result & 0x00FF) == 0) ? 1 : 0;
+    cpu->P.V = ((result ^ (uint16_t)cpu->A) & (result ^ value) & 0x0080) ? 1 : 0;
+    cpu->P.N = (result & 0x0080) ? 1 : 0;
+    cpu->A = result & 0x00FF;
 }
 
 void _instr_AND(CPU* cpu, uint16_t address) {
@@ -66,9 +67,12 @@ void _instr_BPL(CPU* cpu, uint16_t address) {
 }
 
 void _instr_BRK(CPU* cpu, uint16_t address) {
+    cpu->P.I = 1;
     _stack_push(cpu, cpu->PC >> 8);
     _stack_push(cpu, cpu->PC & 0xFF);
+    cpu->P.B = 1;
     _stack_push(cpu, cpu->P.value);
+    cpu->P.B = 0;
     uint8_t addr_lo = cpu_read(cpu->bus, 0xFFFE);
     uint8_t addr_hi = cpu_read(cpu->bus, 0xFFFF);
     uint16_t new_addr = (addr_hi << 8 ) | addr_lo;
@@ -238,7 +242,11 @@ void _instr_PHA(CPU* cpu, uint16_t address) {
 }
 
 void _instr_PHP(CPU* cpu, uint16_t address) {
+    cpu->P.B = 1;
+    cpu->P.U = 1;
     _stack_push(cpu, cpu->P.value);
+    cpu->P.B = 0;
+    cpu->P.U = 0;
 }
 
 void _instr_PLA(CPU* cpu, uint16_t address) {
@@ -250,6 +258,7 @@ void _instr_PLA(CPU* cpu, uint16_t address) {
 
 void _instr_PLP(CPU* cpu, uint16_t address) {
     cpu->P.value =_stack_pull(cpu);
+    cpu->P.U = 1;
 }
 
 void _instr_ROL(CPU* cpu, uint16_t address) {
@@ -300,13 +309,14 @@ void _instr_RTS(CPU* cpu, uint16_t address) {
 }
 
 void _instr_SBC(CPU* cpu, uint16_t address) {
-    uint8_t val = cpu_read(cpu->bus, address) ^ 0xFF;
-    int16_t result = cpu->A - val + cpu->P.C;
-    cpu->P.C = ~(result < 0);
-    cpu->P.Z = (result == 0);
-    cpu->P.V = ((result ^ cpu->A) & (result ^ val) & 0x80) >> 7;
-    cpu->P.N = (result & 0x80) >> 7;
-    cpu->A = result & 0xFF;
+    uint8_t fetched = cpu_read(cpu->bus, address);
+    uint16_t value= ((uint16_t)fetched) ^ 0x00FF;
+    uint16_t result = (uint16_t)cpu->A + value + cpu->P.C;
+    cpu->P.C = (result & 0xFF00) ? 1 :0;
+    cpu->P.Z = ((result & 0x00FF) == 0) ? 1 : 0;
+    cpu->P.V = ((result ^ (uint16_t)cpu->A) & (result ^ value) & 0x0080) ? 1 : 0;
+    cpu->P.N = (result & 0x0080) ? 1 : 0;
+    cpu->A = result & 0x00FF;
 }
 
 void _instr_SEC(CPU* cpu, uint16_t address) {
@@ -358,8 +368,6 @@ void _instr_TXA(CPU* cpu, uint16_t address) {
 }
 
 void _instr_TXS(CPU* cpu, uint16_t address) {
-    cpu->P.Z = (cpu->X == 0);
-    cpu->P.N = (cpu->X & 0x80) >> 7;
     cpu->SP = cpu->X;
 }
 

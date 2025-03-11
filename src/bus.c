@@ -31,7 +31,7 @@ uint8_t cpu_read(Bus* bus, uint16_t address) {
         return 0;
     }
     if (address < 0x4018) {
-        return 0; // Joypad #TODO
+        return controller_read(address);
     }
     if (address < 0x6000) {
         return 0; //Unknown, possibly ROM
@@ -67,7 +67,7 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
         return;
     }
     if (address == 0x4016) {
-        return; // Joystick strobe # TODO
+        controller_write(address, value); // Joystick strobe # TODO
     }
     if (address == 0x4017) {
         //apu_write(bus.apu, address & 0x1F, value);
@@ -82,6 +82,7 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
 
 void bus_step(Bus* bus) {
     int ppu_cycles;
+    input_poll();
     cpu_step(&bus->cpu);
     ppu_cycles = bus->cpu.cycles * 3;
     for (int i=0; i<ppu_cycles; i++) {

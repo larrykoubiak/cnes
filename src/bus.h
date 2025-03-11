@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "cartridge/cartridge.h"
 #include "cpu/cpu.h"
+#include "input/input.h"
 #include "ppu/ppu.h"
 
 typedef struct Bus {
