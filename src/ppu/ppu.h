@@ -132,9 +132,6 @@ uint8_t ppu_register_read(PPU* ppu, uint16_t address);
 void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value);
 uint8_t ppu_read(PPU* ppu, uint16_t address);
 void ppu_write(PPU* ppu, uint16_t address, uint8_t value);
-void ppu_step(PPU* ppu);
-void ppu_trigger_nmi(PPU* ppu);
-void render_scanline(PPU* ppu);
 
 
 #endif

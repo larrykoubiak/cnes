@@ -146,7 +146,7 @@ uint8_t ppu_read(PPU* ppu, uint16_t address) {
         return ppu->vram[address];
     } else if (address < 0x4000) {
         address = address & 0x1F;
-        if (address & 0x03 == 0x00) {
+        if ((address & 0x03) == 0x00) {
             address = 0x00;
         }
         return ppu->palette[address];
@@ -180,56 +180,5 @@ void ppu_write(PPU* ppu, uint16_t address, uint8_t value) {
             address = 0x00;
         }
         ppu->palette[address] = value;
-    }
-}
-
-void ppu_step(PPU* ppu) {
-    if (ppu->scanline >= 0 && ppu->scanline < 240) {
-        if (ppu->cycle == 0) {
-            evaluate_sprites(ppu);
-        } else if (ppu->cycle == 340) {
-            if (ppu->ppumask.BG_RENDER == 1) {
-                render_scanline(ppu);
-            }
-            if (ppu->ppumask.SP_RENDER == 1) {
-                render_sprites(ppu);
-            }
-            if (ppu->ppumask.BG_RENDER == 1 || ppu->ppumask.SP_RENDER == 1) {
-                memcpy(&ppu->framebuffer[(ppu->scanline * 256)], &ppu->pixel_buffer[0], 256);
-            }
-        }
-    } else if (ppu->scanline == 240) {
-    } else if (ppu->scanline == 241) {
-        if (ppu->cycle == 1) {
-            ppu->ppustatus.VBLANK = 1;
-            ppu_trigger_nmi(ppu);
-            ppu->vblank_triggered = 1;
-        }
-    } else if (ppu->scanline == 261) {
-        if (ppu->cycle == 0) {
-            //evaluate_sprites(ppu);
-            ppu->frame_odd = !ppu->frame_odd;
-        } else if (ppu->cycle == 1) {
-            ppu->ppustatus.VBLANK = 0;
-            ppu->ppustatus.SP0_HIT = 0;
-            memset(&ppu->framebuffer, 0, (0xF000));
-            ppu->v.value = ppu->t.value;
-        }
-    }
-    ppu->cycle += 1;
-    if (ppu->cycle >= 341) {
-        ppu->cycle = 0;
-        ppu->scanline += 1;
-        if (ppu->scanline >= 262) {
-            ppu->frame_count += 1;
-            ppu->scanline = 0;
-            ppu->vblank_triggered = 0;
-        }
-    }
-}
-
-void ppu_trigger_nmi(PPU* ppu) {
-    if (ppu->bus && ppu->ppuctrl.NMI_VBL==1) {
-        bus_trigger_nmi(ppu->bus);
     }
 }
