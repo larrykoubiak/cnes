@@ -1,4 +1,4 @@
-#include "../bus.h"
+#include "bus.h"
 
 static inline OpcodeDefinition _new_opcode(AddressModeFunc addr, InstructionFunc instr, uint8_t cycles, const char* disassembly)
 {

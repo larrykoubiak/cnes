@@ -2,6 +2,7 @@
 #define BUS_H
 
 #include <stdint.h>
+#include "apu/apu.h"
 #include "cartridge/cartridge.h"
 #include "cpu/cpu.h"
 #include "input/input.h"
@@ -9,6 +10,7 @@
 
 typedef struct Bus {
     uint8_t ram[0x800];  //2KB RAM
+    APU apu;
     Cartridge cart;
     CPU cpu;
     PPU ppu;

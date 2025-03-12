@@ -16,6 +16,8 @@ typedef struct Mapper {
     WriteFunc write_prg;
     ReadFunc read_chr;
     WriteFunc write_chr;
+    ReadFunc read_wram;
+    WriteFunc write_wram;
     FreeFunc free;
     union {
         void* state;

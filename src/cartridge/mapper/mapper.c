@@ -1,7 +1,7 @@
-#include "mapper.h"
-#include "mapper_000.h"
-#include "mapper_001.h"
-#include "mapper_002.h"
+#include "cartridge/mapper/mapper.h"
+#include "cartridge/mapper/mapper_000.h"
+#include "cartridge/mapper/mapper_001.h"
+#include "cartridge/mapper/mapper_002.h"
 
 Mapper* get_mapper(uint16_t mapper_id){
     switch(mapper_id) {

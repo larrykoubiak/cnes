@@ -1,4 +1,4 @@
-#include "../bus.h"
+#include "bus.h"
 
 void _instr_ADC(CPU* cpu, uint16_t address) {
     uint8_t fetched = cpu_read(cpu->bus, address);

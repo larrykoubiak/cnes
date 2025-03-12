@@ -27,7 +27,7 @@ uint8_t cpu_read(Bus* bus, uint16_t address) {
         return 0; // Open bus from APU
     }
     if (address == 0x4015) {
-        //return apu_read(bus->apu, address & 0x1F);
+        return apu_read(&bus->apu, address & 0x1F);
         return 0;
     }
     if (address < 0x4018) {
@@ -37,7 +37,7 @@ uint8_t cpu_read(Bus* bus, uint16_t address) {
         return 0; //Unknown, possibly ROM
     }
     if (address < 0x8000) {
-        return 0; //Usually PRG-RAM if present
+        return bus->cart.mapper->read_wram(&bus->cart, address & 0x1FFF); //Usually PRG-RAM if present
     }
     if (address < 0x10000) {
         return bus->cart.mapper->read_prg(&bus->cart, address & 0x7FFF);
@@ -55,7 +55,7 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
         return;
     }
     if (address < 0x4014) {
-        //apu_write(bus.apu, address & 0x1F, value);
+        apu_write(&bus->apu, address & 0x1F, value);
         return;
     }
     if (address == 0x4014) {
@@ -63,15 +63,21 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
         return;
     }
     if (address == 0x4015) {
-        //apu_write(bus.apu, address & 0x1F, value);
+        apu_write(&bus->apu, address & 0x1F, value);
         return;
     }
     if (address == 0x4016) {
         controller_write(address, value); // Joystick strobe # TODO
     }
     if (address == 0x4017) {
-        //apu_write(bus.apu, address & 0x1F, value);
+        apu_write(&bus->apu, address & 0x1F, value);
         return;
+    }
+    if (address < 0x6000) {
+        return; //Unknown, possibly ROM
+    }
+    if (address < 0x8000) {
+        bus->cart.mapper->write_wram(&bus->cart, address & 0x1FFF, value); //Usually PRG-RAM if present
     }
     if (address < 0x10000) {
         bus->cart.mapper->write_prg(&bus->cart, address & 0x7FFF, value);

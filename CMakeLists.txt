@@ -18,6 +18,7 @@ set(LIBS)
 
 set(CNES_SOURCES
     src/main.c
+    src/apu/apu.c
     src/cpu/cpu.c
     src/cpu/addressing_modes.c
     src/cpu/instructions.c
@@ -39,15 +40,13 @@ CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")
 
 list(APPEND LIBS SDL3::SDL3-shared)
 
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
 add_executable(${PROJECT_NAME} ${CNES_SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
 
 set(SDL3_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl-build/SDL3.dll")
-# message(STATUS "SDL3.dll expected at: ${SDL3_DLL_PATH}")
-# if(NOT EXISTS "${SDL3_DLL_PATH}")
-#     message(FATAL_ERROR "SDL3.dll not found at ${SDL3_DLL_PATH}. Build SDL3 as SHARED or check the correct path.")
-# endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

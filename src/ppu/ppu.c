@@ -1,4 +1,4 @@
-#include "../bus.h"
+#include "bus.h"
 
 static LoadColorsResult load_colors(PPU* ppu, const char* filename) {
     FILE* f = fopen(filename, "rb");
@@ -23,7 +23,7 @@ int ppu_init(PPU* ppu, Bus* bus, MirroringMode mode) {
 void ppu_reset(PPU* ppu) {
     memset(&ppu->vram,0,0x2000);
     memset(&ppu->oam,0xFF,sizeof(OAMRAM));
-    memset(&ppu->secondary_oam,0,sizeof(Sprite)*8);
+    memset(&ppu->secondary_oam,0xFF,sizeof(Sprite)*8);
     memset(&ppu->palette,0,0x20);
     memset(&ppu->pixel_buffer,0,0x100);
     memset(&ppu->framebuffer,0,0xF000);

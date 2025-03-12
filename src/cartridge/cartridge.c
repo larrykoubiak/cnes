@@ -1,5 +1,5 @@
-#include "cartridge.h"
-#include "mapper/mapper.h"
+#include "cartridge/cartridge.h"
+#include "cartridge/mapper/mapper.h"
 
 int cart_init(Cartridge* cart, const char* filename) {
     LoadCartridgeResult result = cart_load(cart, filename);
@@ -81,6 +81,7 @@ LoadCartridgeResult cart_load(Cartridge* cart, const char* filename){
             cart_free(cart);
             return LOAD_CARTRIDGE_MEM_ERROR;
         }
+        memset(cart->prg_ram, 0, prg_ram_size);
         cart->prg_ram_size = prg_ram_size;
     } else {
         cart->prg_ram = NULL;
@@ -92,6 +93,7 @@ LoadCartridgeResult cart_load(Cartridge* cart, const char* filename){
             cart_free(cart);
             return LOAD_CARTRIDGE_MEM_ERROR;
         }
+        memset(cart->chr_ram, 0, chr_ram_size);
         cart->chr_ram_size = chr_ram_size;
     } else {
         cart->chr_ram = NULL;

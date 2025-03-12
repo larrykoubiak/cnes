@@ -1,4 +1,4 @@
-#include "../bus.h"
+#include "bus.h"
 uint16_t _addr_ABS(CPU* cpu)
 {
     uint8_t addr_lo = _read_PC_incr(cpu);

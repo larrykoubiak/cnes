@@ -1,5 +1,5 @@
-#include "../cartridge.h"
-#include "mapper_001.h"
+#include "cartridge/cartridge.h"
+#include "cartridge/mapper/mapper_001.h"
 
 
 // Initialize the mapper
@@ -68,22 +68,38 @@ static void mapper001_prg_write(Cartridge* cart, uint16_t address, uint8_t value
     }
 }
 static uint8_t mapper001_chr_read(Cartridge* cart, uint16_t address) {
-    Mapper001State* state = (Mapper001State*)cart->mapper->state;
-    if ((state->control.chr_bank_mode) == 0) {  // 8KB CHR mode
-        return cart->chr_rom[(state->chr_bank_0 & 0x1E) * 0x1000 + (address & 0x1FFF)];
-    } else {  // 4KB CHR mode
-        if (address < 0x1000) {
-            return cart->chr_rom[state->chr_bank_0 * 0x1000 + (address & 0x0FFF)];
-        } else {
-            return cart->chr_rom[state->chr_bank_1 * 0x1000 + (address & 0x0FFF)];
+    if (cart->chr_ram) {
+        return cart->chr_ram[address & 0x1FFF];
+    } else {
+        Mapper001State* state = (Mapper001State*)cart->mapper->state;
+        if ((state->control.chr_bank_mode) == 0) {  // 8KB CHR mode
+            return cart->chr_rom[(state->chr_bank_0 & 0x1E) * 0x1000 + (address & 0x1FFF)];
+        } else {  // 4KB CHR mode
+            if (address < 0x1000) {
+                return cart->chr_rom[state->chr_bank_0 * 0x1000 + (address & 0x0FFF)];
+            } else {
+                return cart->chr_rom[state->chr_bank_1 * 0x1000 + (address & 0x0FFF)];
+            }
         }
     }
 }
 static void mapper001_chr_write(Cartridge* cart, uint16_t address, uint8_t value) {
-    if (cart->chr_rom_size == 0) { // Only if CHR RAM is present
-        cart->chr_rom[address % 0x2000] = value;
+    if (cart->chr_ram) {
+        cart->chr_ram[address & 0x1FFFF] = value;
     }
 }
+static uint8_t mapper001_wram_read(Cartridge* cart, uint16_t address){
+    if(cart->prg_ram) {
+        return cart->prg_ram[address & 0x1FFF];
+    }
+    return 0;
+}
+static void mapper001_wram_write(Cartridge* cart, uint16_t address, uint8_t value) {
+    if(cart->prg_ram) {
+        cart->prg_ram[address & 0x1FFF] = value;
+    }
+}
+
 static void mapper001_update_banks(Cartridge* cart) {
     Mapper001State* state = (Mapper001State*)cart->mapper->state;
 }
@@ -101,5 +117,7 @@ Mapper MAPPER_001 = {
     .write_prg = mapper001_prg_write,
     .read_chr = mapper001_chr_read,
     .write_chr = mapper001_chr_write,
+    .read_wram = mapper001_wram_read,
+    .write_wram = mapper001_wram_write,
     .free = mapper001_free
 };

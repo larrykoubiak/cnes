@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "sdl_context.h"
+#include "frontend/sdl_context.h"
 
 SDL_Color sdl_colors[64];
 

@@ -1,4 +1,4 @@
-#include "../bus.h"
+#include "bus.h"
 
 void ppu_step(PPU* ppu) {
     if (ppu->scanline >= 0 && ppu->scanline < 240) {
@@ -60,7 +60,7 @@ void render_scanline(PPU* ppu) {
     fine_x = ppu->x;
     for (x=0; x<256;x++){
         // fetch nametable
-        nametable_address = 0x2000 | (v_copy.value & 0x7FF);
+        nametable_address = 0x2000 | (v_copy.value & 0x0FFF);
         nametable_byte = ppu_read(ppu, nametable_address);
         // fetch attribute
         attribute_address = 0x23C0 | (v_copy.nametable << 10) | ((v_copy.coarse_y >> 2) << 3) | (v_copy.coarse_x >> 2);
@@ -108,10 +108,11 @@ void evaluate_sprites(PPU* ppu) {
     Sprite sprite;
     sprite_height = 8 << ppu->ppuctrl.SPRITESIZE;
     ppu->sprite_count = 0;
+    memset(&ppu->secondary_oam,0xFF,sizeof(Sprite)*8);
     for (i=0; i<64; i++) {
         sprite = ppu->oam.sprites[i];
         yrange = ppu->scanline - sprite.y;
-        if (yrange >=0 && yrange < sprite_height) {
+        if (yrange >=0 && yrange < sprite_height && ppu->sprite_count < 8) {
             if (ppu->sprite_count < 8) {
                 ppu->secondary_oam[ppu->sprite_count] = sprite;
                 ppu->sprite_count += 1;
@@ -126,6 +127,7 @@ void evaluate_sprites(PPU* ppu) {
 void render_sprites(PPU* ppu) {
     int i, x, pixel, palette_index, color, tile_address, y_offset;
     uint8_t sprite_tile_low, sprite_tile_high;
+    uint16_t palette_address;
     Sprite sprite;
     int sprite_height = ppu->ppuctrl.SPRITESIZE == 0 ? 8 : 16;
     for (i=0; i<ppu->sprite_count; i++) {
@@ -134,28 +136,40 @@ void render_sprites(PPU* ppu) {
             continue;
         }
         y_offset = ppu->scanline - sprite.y;
-        if (sprite.attr.flip_v) {
-            y_offset = (sprite_height - 1) - y_offset;
+        if (ppu->ppuctrl.SPRITESIZE == 0) {
+            tile_address = ((ppu->ppuctrl.SPRITETABLE << 12) | (sprite.tile_id << 4) | (sprite.attr.flip_v ? 7 - y_offset: y_offset));
+        } else {
+            uint16_t bank = (sprite.tile_id& 0x01) << 12;
+            uint8_t tile_index = sprite.tile_id & 0xFE;
+            if (sprite.attr.flip_v) {
+                tile_address = (y_offset < 8)
+                    ? bank | ((tile_index +1) << 4) | (7 - (y_offset & 7))
+                    : bank | (tile_index  << 4) | (7 - (y_offset & 7));
+            } else {
+                tile_address = (y_offset < 8)
+                    ? bank | ((tile_index +1) << 4) | (y_offset & 7)
+                    : bank | (tile_index  << 4) | (y_offset & 7);
+            }
         }
-        tile_address = ((ppu->ppuctrl.SPRITETABLE << 12) | (sprite.tile_id * 16) | y_offset);
         sprite_tile_low = ppu_read(ppu, tile_address);
         sprite_tile_high = ppu_read(ppu, tile_address + 8);
         for (x=0; x<8; x++) {
             if (sprite.x + x >= 256) {
                 break;
             }
-            pixel = ((sprite_tile_low >> (7 - x)) & 1) | \
-                    (((sprite_tile_high >> (7 - x)) & 1) << 1);
+            int bit_pos = sprite.attr.flip_h ? x : (7 - x);
+            pixel = ((sprite_tile_low >> bit_pos) & 1) | (((sprite_tile_high >> bit_pos) & 1) << 1);
             if (pixel == 0) {
                 continue;
             }
             palette_index = (sprite.attr.palette & 0x03) + 4;
-            color = ppu->palette[(palette_index << 2) | pixel];
+            palette_address = 0x3F10 + (palette_index << 2) + pixel;
+            color = ppu_read(ppu, palette_address);
             if (sprite.attr.priority == 0 || ppu->pixel_buffer[sprite.x + x] == 0) {
                 ppu->pixel_buffer[sprite.x + x] = color;
             }
             if (i == 0 && ppu->scanline < 240 && sprite.x + x < 256) {
-                if (ppu->pixel_buffer[sprite.x + x] != 0) {
+                if (ppu->pixel_buffer[sprite.x + x] != 0 && pixel != 0) {
                     ppu->ppustatus.SP0_HIT = 1;
                 }
             }

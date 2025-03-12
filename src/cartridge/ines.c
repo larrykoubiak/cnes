@@ -1,4 +1,4 @@
-#include "ines.h"
+#include "cartridge/ines.h"
 
 iNESError parse_ines_header(uint8_t* data, iNESHeader* header){
     uint8_t prg_rom_lsb, chr_rom_lsb, prg_rom_msb, chr_rom_msb, prg_nvram, prg_ram, chr_nvram, chr_ram;

@@ -1,7 +1,7 @@
 #include <SDL3/SDL.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "input.h"
+#include "input/input.h"
 
 static uint8_t input_event_flags = 0;
 static uint8_t prev_event_flags = 0;

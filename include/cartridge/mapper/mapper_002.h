@@ -13,6 +13,8 @@ static uint8_t mapper002_prg_read(Cartridge* cart, uint16_t address);
 static void mapper002_prg_write(Cartridge* cart, uint16_t address, uint8_t value);
 static uint8_t mapper002_chr_read(Cartridge* cart, uint16_t address);
 static void mapper002_chr_write(Cartridge* cart, uint16_t address, uint8_t value);
+static uint8_t mapper002_wram_read(Cartridge* cart, uint16_t address);
+static void mapper002_wram_write(Cartridge* cart, uint16_t address, uint8_t value);
 static void mapper002_free(Cartridge* cart);
 
 extern Mapper MAPPER_002;

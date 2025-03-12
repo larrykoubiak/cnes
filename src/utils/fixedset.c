@@ -1,4 +1,4 @@
-#include "fixedset.h"
+#include "utils/fixedset.h"
 
 void fixedset_insert(FixedIntSet* set, int key){
     int i;
