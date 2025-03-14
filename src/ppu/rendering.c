@@ -53,49 +53,56 @@ void ppu_trigger_nmi(PPU* ppu) {
 
 void render_scanline(PPU* ppu) {
     int x;
-    uint8_t pixel, palette_index, color, fine_x, quadrant;
+    uint8_t pixel, pixel_low, pixel_high, color, shift, mask;
     uint16_t nametable_address, attribute_address, tile_address, palette_address;
     uint8_t nametable_byte, attribute_byte, tile_low_byte, tile_high_byte;
-    LOOPYRegister v_copy = ppu->v;
-    fine_x = ppu->x;
     for (x=0; x<256;x++){
         // fetch nametable
-        nametable_address = 0x2000 | (v_copy.value & 0x0FFF);
+        nametable_address = 0x2000 | (ppu->v.value & 0x0FFF);
         nametable_byte = ppu_read(ppu, nametable_address);
         // fetch attribute
-        attribute_address = 0x23C0 | (v_copy.nametable << 10) | ((v_copy.coarse_y >> 2) << 3) | (v_copy.coarse_x >> 2);
+        attribute_address = 0x23C0 | (ppu->v.nametable_y << 11) | (ppu->v.nametable_y << 10) |((ppu->v.coarse_y >> 2) << 3) | (ppu->v.coarse_x >> 2);
         attribute_byte = ppu_read(ppu, attribute_address);
+        if(ppu->v.coarse_y & 0x02) {
+            attribute_byte >> 4;
+        };
+        if(ppu->v.coarse_x & 0x02) {
+            attribute_byte >> 2;
+        }
+        attribute_byte &= 0x03;
         // fetch tile
-        tile_address = (ppu->ppuctrl.BGTABLE << 12) | (nametable_byte << 4) | v_copy.fine_y;
+        tile_address = (ppu->ppuctrl.BGTABLE << 12) | (nametable_byte << 4) | ppu->v.fine_y;
         tile_low_byte = ppu_read(ppu, tile_address);
         tile_high_byte = ppu_read(ppu, tile_address + 8);
-        pixel = ((tile_low_byte >> (7 - fine_x)) & 1) | (((tile_high_byte >> (7 - fine_x)) & 1) << 1);
-        quadrant = (((v_copy.coarse_y >> 1) & 1) << 1) | ((v_copy.coarse_x >> 1) & 1);
-        palette_index = (attribute_byte >> (quadrant * 2)) & 0x03;
-        palette_address = 0x3F00 + (palette_index << 2) + pixel;
+        shift = 7 - ((ppu->x + x) % 8);
+        mask = 1 << shift;
+        pixel_high = (tile_high_byte & mask) >> shift;
+        pixel_low = (tile_low_byte & mask) >> shift;
+        pixel = (pixel_high << 1) | pixel_low ;
+        palette_address = 0x3F00 | (attribute_byte << 2) | pixel;
         color = ppu_read(ppu, palette_address);
         ppu->pixel_buffer[x] = color;
-        if (fine_x == 7) {
-            fine_x = 0;
-            if (v_copy.coarse_x == 31) {
-                v_copy.coarse_x = 0;
-                v_copy.nametable ^= 1; // Switch horizontal nametable
+        if (((ppu->x + x) % 8) == 7) {
+            if (ppu->v.coarse_x == 31) {
+                ppu->v.coarse_x = 0;
+                ppu->v.nametable_x ^= 1; // Switch horizontal nametable
             } else {
-                v_copy.coarse_x += 1;
+                ppu->v.coarse_x += 1;
             }
-        } else {
-            fine_x += 1;
         }
     }
+    ppu->v.coarse_x = ppu->t.coarse_x;
+    ppu->v.nametable_x = ppu->t.nametable_x;
     if (ppu->v.fine_y < 7) {
         ppu->v.fine_y += 1;
     } else {
         ppu->v.fine_y = 0;
         if (ppu->v.coarse_y == 29) {
             ppu->v.coarse_y = 0;
-            ppu->v.nametable ^= 2;
+            ppu->v.nametable_y ^= 1;
         } else if (ppu->v.coarse_y == 31) {
-            ppu->v.coarse_y = 0; // Wrap around (needed for scrolling)
+            ppu->v.coarse_y = 0;
+            ppu->v.nametable_y ^= 1;
         } else {
             ppu->v.coarse_y += 1;
         }

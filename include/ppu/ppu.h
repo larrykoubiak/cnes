@@ -23,7 +23,8 @@ typedef enum {
 
 typedef union PPUCTRLRegister{
     struct {
-        unsigned int NAMETABLE:2;
+        unsigned int NAMETABLE_X:1;
+        unsigned int NAMETABLE_Y:1;
         unsigned int VRAM_DIRECTION:1;
         unsigned int SPRITETABLE:1;
         unsigned int BGTABLE:1;
@@ -62,7 +63,8 @@ typedef union LOOPYRegister {
     struct {
         unsigned int coarse_x:5;
         unsigned int coarse_y:5;
-        unsigned int nametable:2;
+        unsigned int nametable_x:1;
+        unsigned int nametable_y:1;
         unsigned int fine_y:3;
         unsigned int unused:1;
     };
@@ -87,18 +89,16 @@ typedef struct Sprite {
     uint8_t x;
 } Sprite;
 
-typedef union OAMRAM {
-    uint8_t raw[0x100];
-    Sprite sprites[0x40];
-} OAMRAM;
-
 typedef struct PPU {
-    uint8_t vram[0x2000];
-    OAMRAM  oam;
+    // Memory
+    uint8_t vram[0x1000];
+    union {
+        uint8_t raw[0x100];
+        Sprite sprites[0x40];
+    }  oam;
     Sprite  secondary_oam[0x8];
     uint8_t palette[0x20];
     uint8_t colors[0x600];
-    // Pixel Buffer
     uint8_t pixel_buffer[0x100];
     uint8_t framebuffer[0xF000];
     // Pointers

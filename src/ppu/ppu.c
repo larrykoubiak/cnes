@@ -22,7 +22,7 @@ int ppu_init(PPU* ppu, Bus* bus, MirroringMode mode) {
 
 void ppu_reset(PPU* ppu) {
     memset(&ppu->vram,0,0x2000);
-    memset(&ppu->oam,0xFF,sizeof(OAMRAM));
+    memset(&ppu->oam,0xFF,sizeof(uint8_t)*0x100);
     memset(&ppu->secondary_oam,0xFF,sizeof(Sprite)*8);
     memset(&ppu->palette,0,0x20);
     memset(&ppu->pixel_buffer,0,0x100);
@@ -50,7 +50,7 @@ uint8_t ppu_register_read(PPU* ppu, uint16_t address) {
     int increment = 0;
     switch(address) {
         case 2:
-            result = ppu->ppustatus.value;
+            result = (ppu->ppustatus.value & 0xE0) | (ppu->open_bus_val | 0x1F);
             ppu->ppustatus.VBLANK = 0;
             ppu->ppustatus.SP0_HIT = 0;
             ppu->w = 0;
@@ -78,7 +78,8 @@ void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value) {
     switch(address) {
         case 0:
             ppu->ppuctrl.value = value;
-            ppu->t.nametable = value & 0x03;
+            ppu->t.nametable_x = ppu->ppuctrl.NAMETABLE_X;
+            ppu->t.nametable_y = ppu->ppuctrl.NAMETABLE_Y;
             break;
         case 1:
             ppu->ppumask.value = value;
@@ -97,13 +98,12 @@ void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value) {
             } else {
                 ppu->t.fine_y = value & 0x07;
                 ppu->t.coarse_y = (value >> 3) & 0x1F;
-                ppu->t.nametable = (ppu->t.nametable & 0x01) | ((value >> 5) & 0x02);
             }
             ppu->w ^= 1;
             break;
         case 6:
             if (ppu->w == 0) {
-                ppu->t.value = (ppu->t.value & 0x00FF) | ((value & 0x3F) << 8);
+                ppu->t.value = (ppu->t.value & 0x00FF) | (uint16_t)((value & 0x3F) << 8);
             } else {
                 ppu->t.value = (ppu->t.value & 0xFF00) | value;
                 ppu->v.value = ppu->t.value;
@@ -125,19 +125,9 @@ uint8_t ppu_read(PPU* ppu, uint16_t address) {
     } else if (address < 0x3F00) {
         address = address & 0x0FFF;
         if (ppu->mirroring == HORIZONTAL) {
-            if (address >= 0x0800) {
-                address -= 0x0800;
-            }
-            if (address >= 0x0400) {
-                address -= 0x0400;
-            }
+            address &= 0x0BFF;
         } else if (ppu->mirroring == VERTICAL) {
-            if (address >= 0x0800) {
-                address -= 0x0800;
-            }
-            if (address >= 0x0400 && address < 0x0800) {
-                address -= 0x0400;
-            }
+            address &= 0x07FF;
         } else if (ppu->mirroring == SINGLE_SCREEN_LOWER) {
             address = address & 0x03FF;
         } else if (ppu->mirroring == SINGLE_SCREEN_UPPER) {
