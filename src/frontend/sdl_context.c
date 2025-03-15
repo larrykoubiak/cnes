@@ -1,22 +1,23 @@
 #include <stdio.h>
 #include "frontend/sdl_context.h"
 
-SDL_Color sdl_colors[64];
+static SDL_Color sdl_colors[64];
 
 int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const char *title) {
-
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return -1;
     }
-
+    if (!TTF_Init()) {
+        printf("TTF_Init Error: %s\n", SDL_GetError());
+        return -1;
+    }
     ctx->window = SDL_CreateWindow(title, width, height, 0);
     if (!ctx->window) {
         printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
         SDL_Quit();
         return -1;
     }
-
     ctx->renderer = SDL_CreateRenderer(ctx->window, NULL);
     if (!ctx->renderer) {
         printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
@@ -24,7 +25,6 @@ int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const cha
         SDL_Quit();
         return -1;
     }
-
     for (int i=0; i< 64; i++) {
         sdl_colors[i].r = colors[i *3];
         sdl_colors[i].g = colors[(i *3) + 1];

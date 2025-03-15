@@ -37,8 +37,10 @@ set(CNES_SOURCES
 
 CPMAddPackage("gh:libusb/libusb#v1.0.27")
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")
+CPMAddPackage("gh:libsdl-org/SDL_ttf#release-3.2.0")
 
 list(APPEND LIBS SDL3::SDL3-shared)
+list(APPEND LIBS SDL3_ttf::SDL3_ttf)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
@@ -47,10 +49,15 @@ add_executable(${PROJECT_NAME} ${CNES_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
 
 set(SDL3_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl-build/SDL3.dll")
+set(SDL3_TTF_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl_ttf-build/SDL3_ttf.dll")
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${SDL3_DLL_PATH} ${CMAKE_BINARY_DIR}/SDL3.dll
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${SDL3_TTF_DLL_PATH} ${CMAKE_BINARY_DIR}/SDL3_ttf.dll
 )
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}

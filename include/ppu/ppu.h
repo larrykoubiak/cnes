@@ -33,7 +33,7 @@ typedef union PPUCTRLRegister{
         unsigned int NMI_VBL:1;
     };
     uint8_t value;
-} PPUCTRLRegister;
+} __attribute__((packed)) PPUCTRLRegister;
 
 typedef union PPUMASKRegister{
     struct {
@@ -47,7 +47,7 @@ typedef union PPUMASKRegister{
         unsigned int HL_BLUE:1;
     };
     uint8_t value;
-} PPUMASKRegister;
+} __attribute__((packed)) PPUMASKRegister;
 
 typedef union PPUSTATRegister {
     struct {
@@ -57,7 +57,7 @@ typedef union PPUSTATRegister {
         unsigned int VBLANK:1;
     };
     uint8_t value;
-} PPUSTATRegister;
+} __attribute__((packed)) PPUSTATRegister;
 
 typedef union LOOPYRegister {
     struct {
@@ -69,7 +69,7 @@ typedef union LOOPYRegister {
         unsigned int unused:1;
     };
     uint16_t value;
-} LOOPYRegister;
+} __attribute__((packed)) LOOPYRegister;
 
 typedef union SPRITEATTR {
     struct {
@@ -80,7 +80,7 @@ typedef union SPRITEATTR {
         unsigned int flip_v:1;
     };
     uint8_t value;
-} SPRITEATTR;
+} __attribute__((packed)) SPRITEATTR;
 
 typedef struct Sprite {
     uint8_t y;

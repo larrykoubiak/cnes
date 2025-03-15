@@ -26,9 +26,8 @@ void save_disassembly_cache() {
         fprintf(stderr, "Error: Could not open log.txt for writing.\n");
         return;
     }
-
     for (uint16_t addr = 0; addr < 0xFFF0; addr++) {
-        if (disassembly_cache[addr][0] != 0) { // Only save non-empty entries
+        if (disassembly_cache[addr][0] != 0) {
             fprintf(file, "0x%04X %s\n", addr, disassembly_cache[addr]);
         }
     }
@@ -37,9 +36,6 @@ void save_disassembly_cache() {
 }
 
 void store_disassembly(uint16_t address, const char* instruction) {
-    // if(disassembly_cache[address][0]==0) {
-    //     printf("0x%04X %s\n", address, instruction);
-    // }
     strncpy(disassembly_cache[address], instruction, 15);
     disassembly_cache[address][15] = 0;
 }
@@ -54,6 +50,9 @@ int main(int argc, char *argv[]) {
     Bus bus;
     sdl_context ctx;
     bool running = true;
+    bool paused = false;
+    void *pixels;
+    int pitch;
     if (init(&bus, &ctx, argc, argv) != 0) {
         fprintf(stderr, "Initialization failed.\n");
         return 1;
@@ -67,9 +66,18 @@ int main(int argc, char *argv[]) {
                 running = 0;
             }
         }
+        input_poll();
         uint8_t events = input_get_events();
         if (events & INPUT_EVENT_QUIT) {
             running = false;
+        }
+        if (events & INPUT_EVENT_PAUSE) {
+            paused = !paused;
+            if(paused) {
+                printf("Paused\n");
+            } else {
+                printf("Resumed\n");
+            }
         }
         if (events & INPUT_EVENT_SAVE) {
             save_disassembly_cache();

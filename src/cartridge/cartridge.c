@@ -95,6 +95,15 @@ LoadCartridgeResult cart_load(Cartridge* cart, const char* filename){
         }
         memset(cart->chr_ram, 0, chr_ram_size);
         cart->chr_ram_size = chr_ram_size;
+    } else if (cart->chr_rom_size == 0) { //homebrew needs this
+        chr_ram_size = 0x2000;
+        cart->chr_ram = (uint8_t*) malloc(chr_ram_size);
+        if (!cart->chr_ram) {
+            cart_free(cart);
+            return LOAD_CARTRIDGE_MEM_ERROR;
+        }
+        memset(cart->chr_ram, 0, chr_ram_size);
+        cart->chr_ram_size = chr_ram_size;
     } else {
         cart->chr_ram = NULL;
         cart->chr_ram_size = 0;

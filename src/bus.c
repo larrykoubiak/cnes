@@ -88,7 +88,6 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
 
 void bus_step(Bus* bus) {
     int ppu_cycles;
-    input_poll();
     cpu_step(&bus->cpu);
     ppu_cycles = bus->cpu.cycles * 3;
     for (int i=0; i<ppu_cycles; i++) {

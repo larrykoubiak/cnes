@@ -4,7 +4,7 @@
 #include "input/input.h"
 
 static uint8_t input_event_flags = 0;
-static uint8_t prev_event_flags = 0;
+static bool prev_keystate[SDL_SCANCODE_COUNT] = {0};
 // NES Controller state (8-bit register)
 static uint8_t controller_state[2] = {0};
 static uint8_t controller_shift[2] = {0};
@@ -28,19 +28,23 @@ void input_poll() {
     const bool *keystate = SDL_GetKeyboardState(NULL);
     
     controller_state[0] = 0; // Reset controller state before updating
+    input_event_flags = 0;
 
-    if (keystate[SDL_SCANCODE_ESCAPE]) {
+    if (!keystate[SDL_SCANCODE_ESCAPE] && prev_keystate[SDL_SCANCODE_ESCAPE]) {
         input_event_flags |= INPUT_EVENT_QUIT;
     }
-    if (keystate[SDL_SCANCODE_S]) {
+    if (!keystate[SDL_SCANCODE_P] && prev_keystate[SDL_SCANCODE_P]) {
+        input_event_flags |= INPUT_EVENT_PAUSE;
+    }
+    if (!keystate[SDL_SCANCODE_S] && prev_keystate[SDL_SCANCODE_S]) {
         input_event_flags |= INPUT_EVENT_SAVE;
     }
-    prev_event_flags = input_event_flags;
     for (int i = 0; i < 8; i++) {
         if (keystate[keymap[i]]) {
             controller_state[0] |= (1 << i);
         }
     }
+    memcpy(prev_keystate, keystate, SDL_SCANCODE_COUNT * sizeof(bool));
 }
 
 

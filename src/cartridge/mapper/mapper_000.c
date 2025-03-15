@@ -12,10 +12,16 @@ void mapper000_prg_write(Cartridge* cart, uint16_t address, uint8_t value) {
 }
 
 uint8_t mapper000_chr_read(Cartridge* cart, uint16_t address){
+    if(cart->chr_ram) {
+        return cart->chr_ram[address & (cart->chr_ram_size - 1)];
+    }
     return cart->chr_rom[address & (cart->chr_rom_size - 1)];
 }
 
 void mapper000_chr_write(Cartridge* cart, uint16_t address, uint8_t value) {
+    if (cart->chr_ram) {
+        cart->chr_ram[address & (cart->chr_ram_size - 1)] = value;
+    }
 }
 
 uint8_t mapper000_wram_read(Cartridge* cart, uint16_t address){

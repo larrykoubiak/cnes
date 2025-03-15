@@ -114,13 +114,20 @@ void evaluate_sprites(PPU* ppu) {
     uint8_t sprite_height;
     Sprite sprite;
     sprite_height = 8 << ppu->ppuctrl.SPRITESIZE;
+    // clear secondary OAM
     ppu->sprite_count = 0;
-    memset(&ppu->secondary_oam,0xFF,sizeof(Sprite)*8);
+    for (i=0; i<8; i++) {
+        ppu->secondary_oam[i].y = 0xFF;
+        ppu->secondary_oam[i].tile_id = 0x0;
+        ppu->secondary_oam[i].attr.value = 0x0;
+        ppu->secondary_oam[i].x = 0xFF;
+    }
+    // evaluate
     for (i=0; i<64; i++) {
         sprite = ppu->oam.sprites[i];
         yrange = ppu->scanline - sprite.y;
         if (yrange >=0 && yrange < sprite_height && ppu->sprite_count < 8) {
-            if (ppu->sprite_count < 8) {
+            if (ppu->sprite_count < 9) {
                 ppu->secondary_oam[ppu->sprite_count] = sprite;
                 ppu->sprite_count += 1;
             } else {
@@ -132,16 +139,14 @@ void evaluate_sprites(PPU* ppu) {
 }
 
 void render_sprites(PPU* ppu) {
-    int i, x, pixel, palette_index, color, tile_address, y_offset;
+    int i, x, tile_address, y_offset;
+    uint8_t pixel, pixel_low, pixel_high, color, shift, mask;
     uint8_t sprite_tile_low, sprite_tile_high;
     uint16_t palette_address;
     Sprite sprite;
     int sprite_height = ppu->ppuctrl.SPRITESIZE == 0 ? 8 : 16;
     for (i=0; i<ppu->sprite_count; i++) {
         sprite = ppu->secondary_oam[i];
-        if(sprite.y > 240) {
-            continue;
-        }
         y_offset = ppu->scanline - sprite.y;
         if (ppu->ppuctrl.SPRITESIZE == 0) {
             tile_address = ((ppu->ppuctrl.SPRITETABLE << 12) | (sprite.tile_id << 4) | (sprite.attr.flip_v ? 7 - y_offset: y_offset));
@@ -164,13 +169,15 @@ void render_sprites(PPU* ppu) {
             if (sprite.x + x >= 256) {
                 break;
             }
-            int bit_pos = sprite.attr.flip_h ? x : (7 - x);
-            pixel = ((sprite_tile_low >> bit_pos) & 1) | (((sprite_tile_high >> bit_pos) & 1) << 1);
+            shift = sprite.attr.flip_h ? x : (7 - x);
+            mask = 1 << shift;
+            pixel_low = (sprite_tile_low & mask) >> shift;
+            pixel_high = (sprite_tile_high & mask) >> shift;
+            pixel = (pixel_high << 1) | pixel_low;
             if (pixel == 0) {
                 continue;
             }
-            palette_index = (sprite.attr.palette & 0x03) + 4;
-            palette_address = 0x3F10 + (palette_index << 2) + pixel;
+            palette_address = 0x3F10 | ((sprite.attr.palette & 0x03) << 2) | pixel;
             color = ppu_read(ppu, palette_address);
             if (sprite.attr.priority == 0 || ppu->pixel_buffer[sprite.x + x] == 0) {
                 ppu->pixel_buffer[sprite.x + x] = color;
