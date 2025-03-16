@@ -12,7 +12,7 @@ int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
     if (result_bus != 0) {
         return result_bus;
     }
-    int result_sdl = sdl_init(ctx, bus->ppu.colors, 256, 240, "NES Emulator");
+    int result_sdl = sdl_init(ctx, bus->ppu.colors, 512, 240, "NES Emulator");
     if (result_sdl != 0) {
         return result_sdl;
     }
@@ -73,25 +73,16 @@ int main(int argc, char *argv[]) {
         }
         if (events & INPUT_EVENT_PAUSE) {
             paused = !paused;
-            if(paused) {
-                printf("Paused\n");
-            } else {
-                printf("Resumed\n");
-            }
         }
-        if (events & INPUT_EVENT_SAVE) {
+        if (events & INPUT_EVENT_DUMP) {
             save_disassembly_cache();
         }
-        step(&bus);
-        if(bus.ppu.vblank_triggered==1) {
-            SDL_memcpy(ctx.surface->pixels, bus.ppu.framebuffer, 256 * 240);
-            SDL_Surface *converted = SDL_ConvertSurface(ctx.surface, SDL_PIXELFORMAT_RGB24);
-            if (converted) {
-                SDL_UpdateTexture(ctx.texture, NULL, converted->pixels, converted->pitch);
-                SDL_DestroySurface(converted);
-            }
-            SDL_RenderTexture(ctx.renderer, ctx.texture, NULL, NULL);
-            SDL_RenderPresent(ctx.renderer);
+        if(!paused || events & INPUT_EVENT_STEP)
+        {
+            step(&bus);
+        }
+        if(bus.ppu.vblank_triggered==1 || paused) {
+            sdl_render(&ctx, bus.ppu.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);
             bus.ppu.vblank_triggered=0;
         }
     }

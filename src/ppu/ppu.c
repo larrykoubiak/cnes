@@ -21,7 +21,7 @@ int ppu_init(PPU* ppu, Bus* bus, MirroringMode mode) {
 }
 
 void ppu_reset(PPU* ppu) {
-    memset(&ppu->vram,0,0x2000);
+    memset(&ppu->vram,0,0x1000);
     memset(&ppu->oam,0xFF,sizeof(Sprite)*64);
     memset(&ppu->secondary_oam,0xFF,sizeof(Sprite)*8);
     memset(&ppu->palette,0,0x20);

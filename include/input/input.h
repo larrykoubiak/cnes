@@ -4,8 +4,9 @@
 #include <stdint.h>
 
 #define INPUT_EVENT_QUIT  (1 << 0)
-#define INPUT_EVENT_SAVE  (1 << 1)
+#define INPUT_EVENT_DUMP  (1 << 1)
 #define INPUT_EVENT_PAUSE (1 << 2)
+#define INPUT_EVENT_STEP  (1 << 3)
 
 void input_poll();
 void controller_write(uint16_t addr, uint8_t value);

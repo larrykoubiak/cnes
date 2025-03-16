@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "frontend/sdl_context.h"
 
-static SDL_Color sdl_colors[64];
-
 int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const char *title) {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
@@ -25,24 +23,30 @@ int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const cha
         SDL_Quit();
         return -1;
     }
-    for (int i=0; i< 64; i++) {
-        sdl_colors[i].r = colors[i *3];
-        sdl_colors[i].g = colors[(i *3) + 1];
-        sdl_colors[i].b = colors[(i *3) + 2];
-        sdl_colors[i].a = 255;
-    }
-    ctx->surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_INDEX8);
-    if(!ctx->surface) {
-        printf("SDL_CreateSurface ERror: %s\n", SDL_GetError());
+    ctx->ppu_surface = SDL_CreateSurface(256, 240, SDL_PIXELFORMAT_RGB24);
+    if(!ctx->ppu_surface) {
+        printf("SDL_CreateSurface Error: %s\n", SDL_GetError());
         SDL_DestroyRenderer(ctx->renderer);
         SDL_DestroyWindow(ctx->window);
         SDL_Quit();
         return -1;
     }
-    SDL_Palette *palette = SDL_CreatePalette(64);
-    SDL_SetPaletteColors(palette, sdl_colors, 0, 64);
-    SDL_SetSurfacePalette(ctx->surface, palette);
-
+    ctx->disasm_surface = SDL_CreateSurface(256, 240, SDL_PIXELFORMAT_RGB24);
+    if(!ctx->disasm_surface) {
+        printf("SDL_CreateSurface Error: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(ctx->renderer);
+        SDL_DestroyWindow(ctx->window);
+        SDL_Quit();
+        return -1;
+    }
+    ctx->emu_surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGB24);
+    if(!ctx->emu_surface) {
+        printf("SDL_CreateSurface Error: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(ctx->renderer);
+        SDL_DestroyWindow(ctx->window);
+        SDL_Quit();
+        return -1;
+    }
     ctx->texture = SDL_CreateTexture(ctx->renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, width, height);
     if (!ctx->texture) {
         printf("SDL_CreateTexture Error: %s\n", SDL_GetError());
@@ -51,12 +55,54 @@ int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const cha
         SDL_Quit();
         return -1;
     }
-
+    ctx->font = TTF_OpenFont("arcade-legacy.ttf", 10.0f);
+    if (!ctx->font) {
+        printf("Failed to load font: %s\n", SDL_GetError());
+        return 1;
+    }
+    ctx->details = SDL_GetPixelFormatDetails(ctx->emu_surface->format);
     return 0;
 }
 
+void sdl_render(sdl_context *ctx, uint8_t *framebuffer, char (*disasm)[16], uint16_t PC, bool paused) {
+    uint32_t color = SDL_MapRGB(ctx->details,NULL,0,0,0);
+    SDL_FillSurfaceRect(ctx->emu_surface, NULL, color);
+    // render ppu
+    SDL_memcpy(ctx->ppu_surface->pixels, framebuffer, 256 * 240 * 3);
+    SDL_Rect ppu_rect = {0,0,256,240};
+    SDL_BlitSurface(ctx->ppu_surface, NULL, ctx->emu_surface, &ppu_rect);
+    // render text
+    SDL_FillSurfaceRect(ctx->disasm_surface, NULL, color);
+    if(paused) {
+        SDL_Color white = {255,255,255,255};
+        char text[32];
+        uint16_t offset = PC;
+        for(int y=0; y< 16; y++) {
+            snprintf(text, 32, "%s 0x%04X %s", offset == PC ? "*":" ", offset, disasm[offset]);
+            SDL_Surface *text_surface = TTF_RenderText_Solid(ctx->font, text, 0, white);
+            SDL_Rect text_rect = {0,(y*12),text_surface->w,text_surface->h};
+            SDL_BlitSurface(text_surface, NULL, ctx->disasm_surface, &text_rect);
+            SDL_DestroySurface(text_surface);
+            offset += 1;
+            while(disasm[offset][0]==0) {
+                offset += 1;
+            }
+        }
+    }
+    SDL_Rect disasm_rect = {256,0,256,240};
+    SDL_BlitSurface(ctx->disasm_surface, NULL, ctx->emu_surface, &disasm_rect);
+    // render emu surface to texture
+    SDL_UpdateTexture(ctx->texture, NULL, ctx->emu_surface->pixels, ctx->emu_surface->pitch);
+    SDL_RenderTexture(ctx->renderer, ctx->texture, NULL, NULL);
+    SDL_RenderPresent(ctx->renderer);
+}
+
 void sdl_cleanup(sdl_context *ctx) {
+    if (ctx->font) TTF_CloseFont(ctx->font);
     if (ctx->texture) SDL_DestroyTexture(ctx->texture);
+    if (ctx->emu_surface) SDL_DestroySurface(ctx->emu_surface);
+    if (ctx->disasm_surface) SDL_DestroySurface(ctx->disasm_surface);
+    if (ctx->ppu_surface) SDL_DestroySurface(ctx->ppu_surface);
     if (ctx->renderer) SDL_DestroyRenderer(ctx->renderer);
     if (ctx->window) SDL_DestroyWindow(ctx->window);
     SDL_Quit();

@@ -102,8 +102,14 @@ void bus_trigger_nmi(Bus* bus) {
 
 void oam_dma(Bus* bus, uint8_t value) {
     uint16_t ram_address = value << 8;
-    int i;
+    int i, p;
+    for(p=0;p<6;p++) {
+        ppu_step(&bus->ppu);
+    }
     for (i=0; i<256; i++) {
+        for(p=0;p<6;p++) {
+            ppu_step(&bus->ppu);
+        }
         bus->ppu.oam.raw[i] = bus->ram[ram_address + i];
     }
     bus->cycles += 514;

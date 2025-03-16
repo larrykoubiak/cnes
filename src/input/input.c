@@ -37,7 +37,10 @@ void input_poll() {
         input_event_flags |= INPUT_EVENT_PAUSE;
     }
     if (!keystate[SDL_SCANCODE_S] && prev_keystate[SDL_SCANCODE_S]) {
-        input_event_flags |= INPUT_EVENT_SAVE;
+        input_event_flags |= INPUT_EVENT_STEP;
+    }
+    if (!keystate[SDL_SCANCODE_D] && prev_keystate[SDL_SCANCODE_D]) {
+        input_event_flags |= INPUT_EVENT_DUMP;
     }
     for (int i = 0; i < 8; i++) {
         if (keystate[keymap[i]]) {

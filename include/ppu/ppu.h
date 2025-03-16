@@ -101,6 +101,7 @@ typedef struct PPU {
     uint8_t colors[0x600];
     uint8_t pixel_buffer[0x100];
     uint8_t framebuffer[0xF000];
+    uint8_t framebuffer_rgb[0x2D000];
     // Pointers
     Bus* bus;
     // Registers ($2000-$2007)
