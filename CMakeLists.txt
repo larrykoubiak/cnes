@@ -8,9 +8,9 @@ endif()
 # CPM
 file(
   DOWNLOAD
-  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.38.3/CPM.cmake
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.8/CPM.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
-  EXPECTED_HASH SHA256=cc155ce02e7945e7b8967ddfaff0b050e958a723ef7aad3766d368940cb15494
+  EXPECTED_HASH SHA256=78ba32abdf798bc616bab7c73aac32a17bbd7b06ad9e26a6add69de8f3ae4791
 )
 include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 
@@ -35,7 +35,6 @@ set(CNES_SOURCES
     src/frontend/sdl_context.c
 )
 
-CPMAddPackage("gh:libusb/libusb#v1.0.27")
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")
 CPMAddPackage("gh:libsdl-org/SDL_ttf#release-3.2.0")
 

@@ -87,13 +87,11 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
 };
 
 void bus_step(Bus* bus) {
-    int ppu_cycles;
-    cpu_step(&bus->cpu);
-    ppu_cycles = bus->cpu.cycles * 3;
-    for (int i=0; i<ppu_cycles; i++) {
-        ppu_step(&bus->ppu);
+    ppu_step(&bus->ppu);
+    if((bus->cycles % 3) == 0) {
+        cpu_step(&bus->cpu);
     }
-    bus->cycles += bus->cpu.cycles;
+    bus->cycles++;
 }
 
 void bus_trigger_nmi(Bus* bus) {

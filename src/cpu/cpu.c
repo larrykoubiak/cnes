@@ -207,36 +207,37 @@ int cpu_step(CPU* cpu)
         cpu_handle_nmi(cpu);
         return 0; 
     }
-
-    cpu->cycles = 0;
-    uint16_t offset = cpu->PC;
-    uint8_t op = _read_PC_incr(cpu);
-    OpcodeDefinition opcode = cpu->opcode_table[op];
-    uint16_t address = 0;
-    if (opcode.addr_func) {
-        address = opcode.addr_func(cpu);
+    if (cpu->cycles==0) {
+        uint16_t offset = cpu->PC;
+        uint8_t op = _read_PC_incr(cpu);
+        OpcodeDefinition opcode = cpu->opcode_table[op];
+        uint16_t address = 0;
+        if (opcode.addr_func) {
+            address = opcode.addr_func(cpu);
+        }
+        if (opcode.instr_func) {
+            opcode.instr_func(cpu, address);
+        }
+        cpu->cycles += opcode.base_cycles;
+        if (opcode.disassembly[4] == '#') {
+            uint8_t val = cpu_read(cpu->bus, address);
+            snprintf(cpu->disassembly, 16, opcode.disassembly, val);
+        }
+        else if (opcode.disassembly[12] == 'Y') {
+            uint8_t val = cpu_read(cpu->bus, offset + 1);
+            snprintf(cpu->disassembly, 16, opcode.disassembly, val);
+        }
+        else if (op == 0x6C) { 
+            uint8_t val_lo = cpu_read(cpu->bus, offset + 1);
+            uint8_t val_hi = cpu_read(cpu->bus, offset + 2);
+            uint16_t ind_addr = (uint16_t)(val_lo | (val_hi << 8));
+            snprintf(cpu->disassembly, 16, opcode.disassembly, ind_addr);
+        }
+        else {
+            snprintf(cpu->disassembly, 16, opcode.disassembly, address);
+        }
     }
-    if (opcode.instr_func) {
-        opcode.instr_func(cpu, address);
-    }
-    cpu->cycles += opcode.base_cycles;
-    if (opcode.disassembly[4] == '#') {
-        uint8_t val = cpu_read(cpu->bus, address);
-        snprintf(cpu->disassembly, 16, opcode.disassembly, val);
-    }
-    else if (opcode.disassembly[12] == 'Y') {
-        uint8_t val = cpu_read(cpu->bus, offset + 1);
-        snprintf(cpu->disassembly, 16, opcode.disassembly, val);
-    }
-    else if (op == 0x6C) { 
-        uint8_t val_lo = cpu_read(cpu->bus, offset + 1);
-        uint8_t val_hi = cpu_read(cpu->bus, offset + 2);
-        uint16_t ind_addr = (uint16_t)(val_lo | (val_hi << 8));
-        snprintf(cpu->disassembly, 16, opcode.disassembly, ind_addr);
-    }
-    else {
-        snprintf(cpu->disassembly, 16, opcode.disassembly, address);
-    }
+    cpu->cycles -=1;
     return cpu->cycles;
 }
 

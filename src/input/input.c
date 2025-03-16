@@ -13,7 +13,7 @@ static bool strobe = false;
 // Map SDL keycodes to NES buttons
 static const SDL_Scancode keymap[8] = {
     SDL_SCANCODE_X,   // A
-    SDL_SCANCODE_Z,   // B
+    SDL_SCANCODE_W,   // B
     SDL_SCANCODE_RSHIFT, // Select
     SDL_SCANCODE_RETURN, // Start
     SDL_SCANCODE_UP,

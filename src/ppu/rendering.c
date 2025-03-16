@@ -193,18 +193,6 @@ void render_sprites(PPU* ppu) {
 }
 
 void render_rgb(PPU* ppu) {
-    // uint8_t color_idx;
-    // int src_offset, dst_offset;
-    // for(int y=0; y<240; y++) {
-    //     for(int x=0; x<256;x++) {
-    //         src_offset = ((y*256)+x);
-    //         color_idx = ppu->framebuffer[src_offset] * 3;
-    //         dst_offset = src_offset * 3;
-    //         ppu->framebuffer_rgb[dst_offset + 0] = ppu->colors[color_idx + 0]; //r
-    //         ppu->framebuffer_rgb[dst_offset + 1] = ppu->colors[color_idx + 1]; //g
-    //         ppu->framebuffer_rgb[dst_offset + 2] = ppu->colors[color_idx + 2]; //b
-    //     }
-    // }
     uint8_t *indexed_pixels = ppu->framebuffer;
     uint8_t *rgb_pixels = ppu->framebuffer_rgb;
     uint8_t *palette = ppu->colors;  // Pointer to palette (faster access)
