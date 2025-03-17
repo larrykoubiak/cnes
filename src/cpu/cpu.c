@@ -200,12 +200,12 @@ void cpu_reset(CPU* cpu)
     _instr_JMP(cpu, reset_address);
 }
 
-int cpu_step(CPU* cpu)
+void cpu_step(CPU* cpu)
 {
     if (cpu->nmi_pending) {
         cpu->nmi_pending = false;
         cpu_handle_nmi(cpu);
-        return 0; 
+        return; 
     }
     if (cpu->cycles==0) {
         uint16_t offset = cpu->PC;
@@ -238,7 +238,6 @@ int cpu_step(CPU* cpu)
         }
     }
     cpu->cycles -=1;
-    return cpu->cycles;
 }
 
 void cpu_handle_nmi(CPU* cpu)

@@ -77,9 +77,20 @@ int main(int argc, char *argv[]) {
         if (events & INPUT_EVENT_DUMP) {
             save_disassembly_cache();
         }
-        if(!paused || events & INPUT_EVENT_STEP)
+        if(!paused)
         {
             step(&bus);
+        } else{
+            render_rgb(&bus.ppu);
+            if(events & INPUT_EVENT_STEP) {
+                do {
+                    step(&bus);
+                } while(bus.cpu.cycles>0);
+                do {
+                    step(&bus);
+                } while(bus.cpu.cycles==0);
+
+            }
         }
         if(bus.ppu.vblank_triggered==1 || paused) {
             sdl_render(&ctx, bus.ppu.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);

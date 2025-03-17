@@ -2,6 +2,11 @@
 
 int init_bus(Bus* bus, const char* filename) {
     bus->cycles = 0;
+    bus->dma_page = 0x00;
+    bus->dma_address = 0x00;
+    bus->dma_data = 0x00;
+    bus->dma_dummy = true;
+    bus->dma_transfer = false;
     if (cart_init(&bus->cart, filename) != 0) {
         fprintf(stderr, "Error during cartridge initialization");
         return 1;
@@ -59,7 +64,9 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
         return;
     }
     if (address == 0x4014) {
-        oam_dma(bus, value);
+        bus->dma_page = value;
+        bus->dma_address = 0x00;
+        bus->dma_transfer = true;
         return;
     }
     if (address == 0x4015) {
@@ -89,28 +96,32 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
 void bus_step(Bus* bus) {
     ppu_step(&bus->ppu);
     if((bus->cycles % 3) == 0) {
-        cpu_step(&bus->cpu);
+        if(bus->dma_transfer) {
+            if(bus->dma_dummy) {
+                if(bus->cycles % 2 == 1) {
+                    bus->dma_dummy = false;
+                }
+            } else {
+                if(bus->cycles % 2 == 0) {
+                    bus->dma_data = cpu_read(bus, (bus->dma_page << 8) || bus->dma_address);
+                } else {
+                    bus->ppu.oam.raw[bus->dma_address] = bus->dma_data;
+                    bus->dma_address++;
+                    if(bus->dma_address == 0x00) {
+                        bus->dma_transfer = false;
+                        bus->dma_dummy = true;
+                    }
+                }
+            }
+        } else {
+            cpu_step(&bus->cpu);
+        }
     }
     bus->cycles++;
 }
 
 void bus_trigger_nmi(Bus* bus) {
     bus->cpu.nmi_pending = 1;
-}
-
-void oam_dma(Bus* bus, uint8_t value) {
-    uint16_t ram_address = value << 8;
-    int i, p;
-    for(p=0;p<6;p++) {
-        ppu_step(&bus->ppu);
-    }
-    for (i=0; i<256; i++) {
-        for(p=0;p<6;p++) {
-            ppu_step(&bus->ppu);
-        }
-        bus->ppu.oam.raw[i] = bus->ram[ram_address + i];
-    }
-    bus->cycles += 514;
 }
 
 MirroringMode cart_get_mirroring_mode(const iNESHeader* header) {

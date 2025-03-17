@@ -21,11 +21,11 @@ typedef struct OpcodeDefinition {
 } OpcodeDefinition;
 
 typedef struct CPU {
-    uint8_t         A;
-    uint8_t         X;
-    uint8_t         Y;
-    uint16_t        PC;
-    uint8_t         SP;
+    uint8_t             A;
+    uint8_t             X;
+    uint8_t             Y;
+    uint16_t            PC;
+    uint8_t             SP;
     union {
         struct {
             unsigned int C : 1;
@@ -39,11 +39,11 @@ typedef struct CPU {
         };
         uint8_t value;
     } P;
-    char            disassembly[16];
-    int             cycles;
-    Bus* bus;
-    OpcodeDefinition opcode_table[256];
-    bool            nmi_pending;
+    char                disassembly[16];
+    int                 cycles;
+    Bus*                bus;
+    OpcodeDefinition    opcode_table[256];
+    bool                nmi_pending;
 } CPU;
 
 void _branch(CPU* cpu, int flag, int check, uint16_t address);
@@ -53,7 +53,7 @@ uint8_t _stack_pull(CPU* cpu);
 
 int cpu_init(CPU* cpu, struct Bus* bus);
 void cpu_reset(CPU* cpu);
-int  cpu_step(CPU* cpu);
+void cpu_step(CPU* cpu);
 void cpu_handle_nmi(CPU* cpu);
 
 #endif
