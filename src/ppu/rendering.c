@@ -1,191 +1,306 @@
 #include "bus.h"
 
-void ppu_step(PPU* ppu) {
-    if (ppu->scanline >= 0 && ppu->scanline < 240) {
-        if (ppu->cycle == 0) {
-            evaluate_sprites(ppu);
-        } else if (ppu->cycle == 340) {
-            if (ppu->ppumask.BG_RENDER == 1) {
-                render_scanline(ppu);
-            }
-            if (ppu->ppumask.SP_RENDER == 1) {
-                render_sprites(ppu);
-            }
-            if (ppu->ppumask.BG_RENDER == 1 || ppu->ppumask.SP_RENDER == 1) {
-                memcpy(&ppu->framebuffer[(ppu->scanline * 256)], &ppu->pixel_buffer[0], 256);
-            }
-        }
-    } else if (ppu->scanline == 240) {
-    } else if (ppu->scanline == 241) {
-        if (ppu->cycle == 1) {
-            ppu->ppustatus.VBLANK = 1;
-            ppu_trigger_nmi(ppu);
-            render_rgb(ppu);
-            ppu->vblank_triggered = 1;
-        }
-    } else if (ppu->scanline == 261) {
-        if (ppu->cycle == 0) {
-            //evaluate_sprites(ppu);
-            ppu->frame_odd = !ppu->frame_odd;
-        } else if (ppu->cycle == 1) {
-            ppu->ppustatus.VBLANK = 0;
-            ppu->ppustatus.SP0_HIT = 0;
-            memset(&ppu->framebuffer, 0, (0xF000));
-            ppu->v.value = ppu->t.value;
-        }
+void renderer_init(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    memset(renderer,0, sizeof(Renderer));
+    memset(renderer->secondary_oam,0xFF,0x20);
+}
+
+void renderer_step(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    if(renderer->scanline < 240) {
+        render_visible_scanline(ppu);
+    } else if (renderer->scanline == 240) {
+        // fuck all
+    } else if (renderer->scanline == 241 && renderer->cycle == 1) {
+        ppu->ppustatus.VBLANK = 1;
+        ppu_trigger_nmi(ppu);
+        render_rgb(ppu);
+        ppu->vblank_triggered = 1;
+    } else if (renderer->scanline == 261) {
+        render_prerender_scanline(ppu);
     }
-    ppu->cycle += 1;
-    if (ppu->cycle >= 341) {
-        ppu->cycle = 0;
-        ppu->scanline += 1;
-        if (ppu->scanline >= 262) {
-            ppu->frame_count += 1;
-            ppu->scanline = 0;
-            ppu->vblank_triggered = 0;
+    renderer->cycle++;
+    if (renderer->cycle > 340) {
+        renderer->cycle = 0;
+        renderer->scanline += 1;
+        if (renderer->scanline > 261) {
+            renderer->frame_count += 1;
+            renderer->scanline = 0;
+            renderer->frame_odd = !renderer->frame_odd;
         }
     }
 }
 
-void ppu_trigger_nmi(PPU* ppu) {
-    if (ppu->bus && ppu->ppuctrl.NMI_VBL==1) {
-        bus_trigger_nmi(ppu->bus);
+void render_visible_scanline(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    uint16_t cycle = renderer->cycle;
+    if(cycle == 0) {
+        //load x counters for sprites
+        for(int i=0;i<8;i++) {
+            renderer->sprite_x_counters[i] = renderer->secondary_oam->sprites[i].x;
+        }
+    }
+    // Rendering
+    if((cycle >=1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) {
+        update_shifters(ppu);
+        // BG rendering
+        switch((cycle - 1) % 8) {
+            case 0:
+                load_shifters(ppu);
+                read_NT(ppu);
+                break;
+            case 2:
+                read_AT(ppu);
+                break;
+            case 4:
+                read_BG_lsb(ppu);
+                break;
+            case 6:
+                read_BG_msb(ppu);
+                break;
+            case 7:
+                inc_hori(ppu);
+                break;
+            default:
+                break;
+        }
+        // FG rendering
+        if(cycle >1 && cycle <=64) {
+            uint8_t offset = (cycle-1) >> 1;
+            if(((cycle-1) % 2)==1) {
+                renderer->secondary_oam->raw[offset] = 0xFF;
+            }
+        }
+        if(cycle >64 && cycle <= 256) {
+            if(cycle==65) {
+                renderer->oam_m = 0;
+                renderer->oam_n = 0;
+                renderer->sec_oam_index = 0;
+                renderer->sprite_count = 0;
+                renderer->sprite_eval_done = false;
+                renderer->sprite_overflow = false;
+            }
+            eval_sprite(ppu);
+        }
+        // TODO: Render pixel
+    }
+    if(cycle == 256) {
+        inc_vert(ppu);
+    }
+    if(cycle >= 257 && cycle <= 320) {
+        if(cycle == 257) {
+            load_shifters(ppu);
+            reset_hori(ppu);
+        }
+        // TODO : Fill sprite shifters
     }
 }
 
-void render_scanline(PPU* ppu) {
-    int x;
-    uint8_t pixel, pixel_low, pixel_high, color, shift, mask;
-    uint16_t nametable_address, attribute_address, tile_address, palette_address;
-    uint8_t nametable_byte, attribute_byte, tile_low_byte, tile_high_byte;
-    for (x=0; x<256;x++){
-        // fetch nametable
-        nametable_address = 0x2000 | (ppu->v.value & 0x0FFF);
-        nametable_byte = ppu_read(ppu, nametable_address);
-        // fetch attribute
-        attribute_address = 0x23C0 | (ppu->v.nametable_y << 11) | (ppu->v.nametable_y << 10) |((ppu->v.coarse_y >> 2) << 3) | (ppu->v.coarse_x >> 2);
-        attribute_byte = ppu_read(ppu, attribute_address);
-        if(ppu->v.coarse_y & 0x02) {
-            attribute_byte >> 4;
-        };
-        if(ppu->v.coarse_x & 0x02) {
-            attribute_byte >> 2;
+void render_prerender_scanline(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    uint16_t cycle = renderer->cycle;
+    if(cycle == 0) {
+        //load x counters for sprites
+        for(int i=0;i<8;i++) {
+            renderer->sprite_x_counters[i] = renderer->secondary_oam->sprites[i].x;
         }
-        attribute_byte &= 0x03;
-        // fetch tile
-        tile_address = (ppu->ppuctrl.BGTABLE << 12) | (nametable_byte << 4) | ppu->v.fine_y;
-        tile_low_byte = ppu_read(ppu, tile_address);
-        tile_high_byte = ppu_read(ppu, tile_address + 8);
-        shift = 7 - ((ppu->x + x) % 8);
-        mask = 1 << shift;
-        pixel_high = (tile_high_byte & mask) >> shift;
-        pixel_low = (tile_low_byte & mask) >> shift;
-        pixel = (pixel_high << 1) | pixel_low ;
-        palette_address = 0x3F00 | (attribute_byte << 2) | pixel;
-        color = ppu_read(ppu, palette_address);
-        ppu->pixel_buffer[x] = color;
-        if (((ppu->x + x) % 8) == 7) {
-            if (ppu->v.coarse_x == 31) {
-                ppu->v.coarse_x = 0;
-                ppu->v.nametable_x ^= 1; // Switch horizontal nametable
+    }
+    // Rendering
+    if((cycle >=1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) {
+        update_shifters(ppu);
+        // BG rendering
+        switch((cycle - 1) % 8) {
+            case 0:
+                load_shifters(ppu);
+                read_NT(ppu);
+                break;
+            case 2:
+                read_AT(ppu);
+                break;
+            case 4:
+                read_BG_lsb(ppu);
+                break;
+            case 6:
+                read_BG_msb(ppu);
+                break;
+            case 7:
+                inc_hori(ppu);
+                break;
+            default:
+                break;
+        }
+        // FG rendering
+        if(cycle >1 && cycle <=64) {
+            uint8_t offset = (cycle-1) >> 1;
+            if(((cycle-1) % 2)==1) {
+                renderer->secondary_oam->raw[offset] = 0xFF;
+            }
+        }
+        if(cycle >64 && cycle <= 256) {
+            // Sprite evaluation
+
+        }
+    }
+    if(cycle == 256) {
+        inc_vert(ppu);
+    }
+    if(cycle == 257) {
+        load_shifters(ppu);
+        reset_hori(ppu);
+    }
+}
+
+void render_pixel(PPU* ppu) {
+
+}
+
+void load_shifters(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    renderer->bg_shifter_pattern_low = (renderer->bg_shifter_pattern_low & 0xFF00) | renderer->bg_next_pattern_lsb;
+    renderer->bg_shifter_pattern_high = (renderer->bg_shifter_pattern_high & 0xFF00) | renderer->bg_next_pattern_msb;
+    renderer->bg_shifter_attribute_low = (renderer->bg_shifter_pattern_high & 0xFF00) | (renderer->bg_next_attr & 0x01) ? 0xFF : 0x00;
+    renderer->bg_shifter_attribute_high = (renderer->bg_shifter_attribute_high & 0xFF00) | (renderer->bg_next_attr & 0x02) ? 0xFF : 0x00;
+}
+
+void update_shifters(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    if (ppu->ppumask.BG_RENDER == 1) {
+        renderer->bg_shifter_pattern_low << 1;
+        renderer->bg_shifter_pattern_high << 1;
+        renderer->bg_shifter_attribute_low << 1;
+        renderer->bg_shifter_attribute_high << 1;
+    }
+    if ((ppu->ppumask.SP_RENDER == 1) && (renderer->cycle >=1 && renderer->cycle <= 256)) {
+        for(int i=0; i < 8; i++) {
+            if(renderer->sprite_x_counters[i] > 0) {
+                renderer->sprite_x_counters[i]--;
             } else {
-                ppu->v.coarse_x += 1;
+                renderer->sprite_shifter_pattern_low[i] << 1;
+                renderer->sprite_shifter_pattern_high[i] << 1;
             }
         }
     }
-    ppu->v.coarse_x = ppu->t.coarse_x;
-    ppu->v.nametable_x = ppu->t.nametable_x;
-    if (ppu->v.fine_y < 7) {
-        ppu->v.fine_y += 1;
+}
+
+void read_NT(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    renderer->bg_next_tile_id = ppu_read(ppu, 0x2000 | (renderer->v.value & 0x0FFF));
+}
+
+void read_AT(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    renderer->bg_next_attr = ppu_read(ppu, 0x23C0 | (renderer->v.value & 0x0FFF));
+    if(renderer->v.coarse_y & 0x02) renderer->bg_next_attr >>= 4;
+    if(renderer->v.coarse_x & 0x02) renderer->bg_next_attr >>= 2;
+}
+
+void read_BG_lsb(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    uint16_t address = (ppu->ppuctrl.BGTABLE << 12) + ((uint16_t)renderer->bg_next_tile_id << 4) + (renderer->v.fine_y) + 0;
+    renderer->bg_next_pattern_lsb = ppu_read(ppu, address);
+}
+
+void read_BG_msb(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    uint16_t address = (ppu->ppuctrl.BGTABLE << 12) + ((uint16_t)renderer->bg_next_tile_id << 4) + (renderer->v.fine_y) + 8;
+    renderer->bg_next_pattern_msb = ppu_read(ppu, address);
+}
+
+void inc_hori(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    if(ppu->ppumask.BG_RENDER || ppu->ppumask.SP_RENDER) {
+        if(renderer->v.coarse_x == 31) {
+            renderer->v.coarse_x = 0;
+            renderer->v.nametable_x = ~renderer->v.nametable_x;
+        } else {
+            renderer->v.coarse_x++;
+        }
+    }
+}
+
+void inc_vert(PPU* ppu) {
+    Renderer* renderer = &ppu->renderer;
+    if(ppu->ppumask.BG_RENDER || ppu->ppumask.SP_RENDER) {
+        if(renderer->v.fine_y < 7) {
+            renderer->v.fine_y++;
+        } else {
+            if(renderer->v.coarse_y == 29) {
+                renderer->v.coarse_y = 0;
+                renderer->v.nametable_y = ~renderer->v.nametable_y;
+            } else if(renderer->v.coarse_y == 31) {
+                    renderer->v.coarse_y = 0;
+            } else {
+                renderer->v.coarse_y++;
+            }
+        }
+    }
+}
+
+void reset_hori(PPU* ppu){
+    Renderer* renderer = &ppu->renderer;
+    if(ppu->ppumask.BG_RENDER || ppu->ppumask.SP_RENDER) {
+        renderer->v.nametable_x = renderer->t.nametable_x;
+        renderer->v.coarse_x = renderer->t.coarse_x;
+    }
+}
+
+void reset_vert(PPU* ppu){
+    Renderer* renderer = &ppu->renderer;
+    if(ppu->ppumask.BG_RENDER || ppu->ppumask.SP_RENDER) {
+        renderer->v.fine_y = renderer->t.fine_y;
+        renderer->v.nametable_y = renderer->t.nametable_y;
+        renderer->v.coarse_y = renderer->t.coarse_y;
+    }
+}
+
+void eval_sprite(PPU* ppu) {
+    int diff;
+    Renderer* renderer = &ppu->renderer;
+    uint16_t cycle = renderer->cycle;
+    bool odd_cycle = (cycle & 1);
+    if(renderer->sprite_count < 8) {
+        if(odd_cycle) {
+            renderer->sprite_y = ppu->oam.raw[(renderer->oam_n * 4) + renderer->oam_m];
+        } else {
+            if(renderer->oam_m == 0) {
+                diff = (renderer->scanline + 1) - renderer->sprite_y;
+                if(diff >= 0 && diff < (ppu->ppuctrl.SPRITESIZE == 1 ? 16 : 8)) {
+                    renderer->secondary_oam->raw[renderer->sec_oam_index++] = renderer->sprite_y;
+                    renderer->oam_m++;
+                } else {
+                    renderer->oam_n++;
+                    if(renderer->oam_n >= 64) {
+                        renderer->sprite_eval_done = true;
+                    }
+                }
+            } else {
+                renderer->secondary_oam->raw[renderer->sec_oam_index++] = renderer->sprite_y;
+                renderer->oam_m++;
+                if(renderer->oam_m == 4) {
+                    renderer->oam_m = 0;
+                    renderer->oam_n++;
+                    renderer->sprite_count++;
+                    if(renderer->oam_n >= 64) {
+                        renderer->sprite_eval_done = true;
+                    }
+                }
+            }
+        }
     } else {
-        ppu->v.fine_y = 0;
-        if (ppu->v.coarse_y == 29) {
-            ppu->v.coarse_y = 0;
-            ppu->v.nametable_y ^= 1;
-        } else if (ppu->v.coarse_y == 31) {
-            ppu->v.coarse_y = 0;
-            ppu->v.nametable_y ^= 1;
+        if(odd_cycle) {
+            renderer->sprite_y = ppu->oam.raw[(renderer->oam_n * 4) + renderer->oam_m];
         } else {
-            ppu->v.coarse_y += 1;
-        }
-    }
-}
-
-void evaluate_sprites(PPU* ppu) {
-    int i, yrange;
-    uint8_t sprite_height;
-    Sprite sprite;
-    sprite_height = 8 << ppu->ppuctrl.SPRITESIZE;
-    // clear secondary OAM
-    ppu->sprite_count = 0;
-    for (i=0; i<8; i++) {
-        ppu->secondary_oam[i].y = 0xFF;
-        ppu->secondary_oam[i].tile_id = 0x0;
-        ppu->secondary_oam[i].attr.value = 0x0;
-        ppu->secondary_oam[i].x = 0xFF;
-    }
-    // evaluate
-    for (i=0; i<64; i++) {
-        sprite = ppu->oam.sprites[i];
-        yrange = ppu->scanline - sprite.y;
-        if (yrange >=0 && yrange < sprite_height && ppu->sprite_count < 8) {
-            if (ppu->sprite_count < 9) {
-                ppu->secondary_oam[ppu->sprite_count] = sprite;
-                ppu->sprite_count += 1;
-            } else {
-                ppu->ppustatus.SP_OVERFLOW = 1;
-                break;
+            diff = (renderer->scanline + 1) - renderer->sprite_y;
+            if(diff >= 0 && diff < (ppu->ppuctrl.SPRITESIZE == 1 ? 16 : 8)) {
+                renderer->sprite_overflow = true;
             }
-        }
-    }
-}
-
-void render_sprites(PPU* ppu) {
-    int i, x, tile_address, y_offset;
-    uint8_t pixel, pixel_low, pixel_high, color, shift, mask;
-    uint8_t sprite_tile_low, sprite_tile_high;
-    uint16_t palette_address;
-    Sprite sprite;
-    int sprite_height = ppu->ppuctrl.SPRITESIZE == 0 ? 8 : 16;
-    for (i=0; i<ppu->sprite_count; i++) {
-        sprite = ppu->secondary_oam[i];
-        y_offset = ppu->scanline - sprite.y;
-        if (ppu->ppuctrl.SPRITESIZE == 0) {
-            tile_address = ((ppu->ppuctrl.SPRITETABLE << 12) | (sprite.tile_id << 4) | (sprite.attr.flip_v ? 7 - y_offset: y_offset));
-        } else {
-            uint16_t bank = (sprite.tile_id& 0x01) << 12;
-            uint8_t tile_index = sprite.tile_id & 0xFE;
-            if (sprite.attr.flip_v) {
-                tile_address = (y_offset < 8)
-                    ? bank | ((tile_index +1) << 4) | (7 - (y_offset & 7))
-                    : bank | (tile_index  << 4) | (7 - (y_offset & 7));
-            } else {
-                tile_address = (y_offset < 8)
-                    ? bank | ((tile_index +1) << 4) | (y_offset & 7)
-                    : bank | (tile_index  << 4) | (y_offset & 7);
-            }
-        }
-        sprite_tile_low = ppu_read(ppu, tile_address);
-        sprite_tile_high = ppu_read(ppu, tile_address + 8);
-        for (x=0; x<8; x++) {
-            if (sprite.x + x >= 256) {
-                break;
-            }
-            shift = sprite.attr.flip_h ? x : (7 - x);
-            mask = 1 << shift;
-            pixel_low = (sprite_tile_low & mask) >> shift;
-            pixel_high = (sprite_tile_high & mask) >> shift;
-            pixel = (pixel_high << 1) | pixel_low;
-            if (pixel == 0) {
-                continue;
-            }
-            palette_address = 0x3F10 | ((sprite.attr.palette & 0x03) << 2) | pixel;
-            color = ppu_read(ppu, palette_address);
-            if (sprite.attr.priority == 0 || ppu->pixel_buffer[sprite.x + x] == 0) {
-                ppu->pixel_buffer[sprite.x + x] = color;
-            }
-            if (i == 0 && ppu->scanline < 240 && sprite.x + x < 256) {
-                if (ppu->pixel_buffer[sprite.x + x] != 0 && pixel != 0) {
-                    ppu->ppustatus.SP0_HIT = 1;
+            renderer->oam_m++;
+            if(renderer->oam_m == 4) {
+                renderer->oam_m = 0;
+                renderer->oam_n++;
+                if(renderer->oam_n >= 64) {
+                    renderer->sprite_eval_done = true;
                 }
             }
         }
@@ -193,8 +308,9 @@ void render_sprites(PPU* ppu) {
 }
 
 void render_rgb(PPU* ppu) {
-    uint8_t *indexed_pixels = ppu->framebuffer;
-    uint8_t *rgb_pixels = ppu->framebuffer_rgb;
+    Renderer* renderer = &ppu->renderer;
+    uint8_t *indexed_pixels = renderer->framebuffer;
+    uint8_t *rgb_pixels = renderer->framebuffer_rgb;
     uint8_t *palette = ppu->colors;  // Pointer to palette (faster access)
     for (int i = 0; i < 256 * 240; i++) {
         uint8_t *color = &palette[indexed_pixels[i] * 3];  // Direct lookup

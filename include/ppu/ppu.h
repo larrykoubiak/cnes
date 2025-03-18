@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "rendering.h"
+#include "ppu/rendering.h"
 
 typedef struct Bus Bus;
 
@@ -59,36 +59,6 @@ typedef union PPUSTATRegister {
     uint8_t value;
 } __attribute__((packed)) PPUSTATRegister;
 
-typedef union LOOPYRegister {
-    struct {
-        unsigned int coarse_x:5;
-        unsigned int coarse_y:5;
-        unsigned int nametable_x:1;
-        unsigned int nametable_y:1;
-        unsigned int fine_y:3;
-        unsigned int unused:1;
-    };
-    uint16_t value;
-} __attribute__((packed)) LOOPYRegister;
-
-typedef union SPRITEATTR {
-    struct {
-        unsigned int palette:2;
-        unsigned int unused:3;
-        unsigned int priority:1;
-        unsigned int flip_h:1;
-        unsigned int flip_v:1;
-    };
-    uint8_t value;
-} __attribute__((packed)) SPRITEATTR;
-
-typedef struct Sprite {
-    uint8_t y;
-    uint8_t tile_id;
-    SPRITEATTR attr;
-    uint8_t x;
-} Sprite;
-
 typedef struct PPU {
     // Memory
     uint8_t vram[0x1000];
@@ -96,12 +66,8 @@ typedef struct PPU {
         uint8_t raw[0x100];
         Sprite sprites[0x40];
     }  oam;
-    Sprite  secondary_oam[0x8];
     uint8_t palette[0x20];
     uint8_t colors[0x600];
-    uint8_t pixel_buffer[0x100];
-    uint8_t framebuffer[0xF000];
-    uint8_t framebuffer_rgb[0x2D000];
     // Pointers
     Bus* bus;
     // Registers ($2000-$2007)
@@ -111,28 +77,19 @@ typedef struct PPU {
     uint8_t oamaddr;
     uint16_t ppuaddr;
     uint8_t ppudata;
-    // Loopy registers
-    LOOPYRegister v;
-    LOOPYRegister t;
-    uint8_t x;
-    uint8_t w;
-    // Internal state
-    MirroringMode mirroring;
-    uint64_t cycle;
-    int scanline;
-    bool frame_odd;
     uint8_t open_bus_val;
-    uint64_t frame_count;
-    uint8_t sprite_count;
+    MirroringMode mirroring;
+    Renderer renderer;
     bool vblank_triggered;
 } PPU;
 
+void ppu_step(PPU* ppu);
 int ppu_init(PPU* ppu, struct Bus* bus, MirroringMode mode);
 void ppu_reset(PPU* ppu);
 uint8_t ppu_register_read(PPU* ppu, uint16_t address);
 void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value);
 uint8_t ppu_read(PPU* ppu, uint16_t address);
 void ppu_write(PPU* ppu, uint16_t address, uint8_t value);
-
+void ppu_trigger_nmi(PPU* ppu);
 
 #endif

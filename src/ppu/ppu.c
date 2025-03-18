@@ -23,26 +23,14 @@ int ppu_init(PPU* ppu, Bus* bus, MirroringMode mode) {
 void ppu_reset(PPU* ppu) {
     memset(&ppu->vram,0,0x1000);
     memset(&ppu->oam,0xFF,sizeof(Sprite)*64);
-    memset(&ppu->secondary_oam,0xFF,sizeof(Sprite)*8);
     memset(&ppu->palette,0,0x20);
-    memset(&ppu->pixel_buffer,0,0x100);
-    memset(&ppu->framebuffer,0,0xF000);
     ppu->ppuctrl.value = 0;
     ppu->ppumask.value = 0;
     ppu->ppustatus.value = 0;
+    ppu->open_bus_val = 0;
     ppu->oamaddr = 0;
     ppu->ppuaddr = 0;
     ppu->ppudata = 0;
-    ppu->v.value = 0;
-    ppu->t.value = 0;
-    ppu->x = 0;
-    ppu->w = 0;
-    ppu->cycle = 0;
-    ppu->scanline = 0;
-    ppu->frame_odd = 0;
-    ppu->open_bus_val = 0;
-    ppu->frame_count = 0;
-    ppu->sprite_count = 0;
 }
 
 uint8_t ppu_register_read(PPU* ppu, uint16_t address) {
@@ -53,19 +41,19 @@ uint8_t ppu_register_read(PPU* ppu, uint16_t address) {
             result = (ppu->ppustatus.value & 0xE0) | (ppu->open_bus_val | 0x1F);
             ppu->ppustatus.VBLANK = 0;
             ppu->ppustatus.SP0_HIT = 0;
-            ppu->w = 0;
+            ppu->renderer.w = 0;
             break;
         case 4:
             result = ppu->oam.raw[ppu->oamaddr];
             break;
         case 7:
             result = ppu->open_bus_val;
-            ppu->open_bus_val = ppu_read(ppu, ppu->v.value);
-            if (ppu->v.value >= 0x3F00) {
+            ppu->open_bus_val = ppu_read(ppu, ppu->renderer.v.value);
+            if (ppu->renderer.v.value >= 0x3F00) {
                 result = ppu->open_bus_val;
             }
             increment = ppu->ppuctrl.VRAM_DIRECTION == 1 ? 32 : 1;
-            ppu->v.value = (ppu->v.value + increment) & 0x3FFF;
+            ppu->renderer.v.value += increment;
             break;
         default:
             break;
@@ -78,8 +66,8 @@ void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value) {
     switch(address) {
         case 0:
             ppu->ppuctrl.value = value;
-            ppu->t.nametable_x = ppu->ppuctrl.NAMETABLE_X;
-            ppu->t.nametable_y = ppu->ppuctrl.NAMETABLE_Y;
+            ppu->renderer.t.nametable_x = ppu->ppuctrl.NAMETABLE_X;
+            ppu->renderer.t.nametable_y = ppu->ppuctrl.NAMETABLE_Y;
             break;
         case 1:
             ppu->ppumask.value = value;
@@ -92,28 +80,28 @@ void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value) {
             ppu->oamaddr = (ppu->oamaddr + 1) & 0xFF;
             break;
         case 5:
-            if (ppu->w == 0) {
-                ppu->x = value & 0x07;
-                ppu->t.coarse_x = (value >> 3) & 0x1F;
+            if (ppu->renderer.w == 0) {
+                ppu->renderer.x = value & 0x07;
+                ppu->renderer.t.coarse_x = (value >> 3) & 0x1F;
             } else {
-                ppu->t.fine_y = value & 0x07;
-                ppu->t.coarse_y = (value >> 3) & 0x1F;
+                ppu->renderer.t.fine_y = value & 0x07;
+                ppu->renderer.t.coarse_y = (value >> 3) & 0x1F;
             }
-            ppu->w ^= 1;
+            ppu->renderer.w ^= 1;
             break;
         case 6:
-            if (ppu->w == 0) {
-                ppu->t.value = (ppu->t.value & 0x00FF) | (uint16_t)((value & 0x3F) << 8);
+            if (ppu->renderer.w == 0) {
+                ppu->renderer.t.value = (ppu->renderer.t.value & 0x00FF) | (uint16_t)((value & 0x3F) << 8);
             } else {
-                ppu->t.value = (ppu->t.value & 0xFF00) | value;
-                ppu->v.value = ppu->t.value;
+                ppu->renderer.t.value = (ppu->renderer.t.value & 0xFF00) | value;
+                ppu->renderer.v.value = ppu->renderer.t.value;
             }
-            ppu->w ^= 1;
+            ppu->renderer.w ^= 1;
             break;
         case 7:
-            ppu_write(ppu, ppu->v.value, value);
+            ppu_write(ppu, ppu->renderer.v.value, value);
             increment = ppu->ppuctrl.VRAM_DIRECTION == 1 ? 32 : 1;
-            ppu->v.value =(ppu->v.value + increment) & 0x3FFF;
+            ppu->renderer.v.value =(ppu->renderer.v.value + increment) & 0x3FFF;
         default:
             break;
     }
@@ -171,4 +159,14 @@ void ppu_write(PPU* ppu, uint16_t address, uint8_t value) {
         }
         ppu->palette[address] = value;
     }
+}
+
+void ppu_trigger_nmi(PPU* ppu) {
+    if (ppu->bus && ppu->ppuctrl.NMI_VBL==1) {
+        bus_trigger_nmi(ppu->bus);
+    }
+}
+
+void ppu_step(PPU* ppu) {
+    renderer_step(ppu);
 }

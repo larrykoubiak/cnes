@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
             }
         }
         if(bus.ppu.vblank_triggered==1 || paused) {
-            sdl_render(&ctx, bus.ppu.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);
+            sdl_render(&ctx, bus.ppu.renderer.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);
             bus.ppu.vblank_triggered=0;
         }
     }
