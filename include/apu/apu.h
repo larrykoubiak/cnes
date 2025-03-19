@@ -4,35 +4,35 @@
 #include <stdint.h>
 
 typedef struct Timer {
-    unsigned int timer: 11;
-    unsigned int length_counter: 5;
+    uint16_t timer: 11;
+    uint8_t length_counter: 5;
 } Timer;
 
 typedef struct Envelope {
-    unsigned int volume: 4;
-    unsigned int constant_volume: 1;
-    unsigned int loop_envelope: 1;
-    unsigned int duty: 2;
+    uint8_t volume: 4;
+    uint8_t constant_volume: 1;
+    uint8_t loop_envelope: 1;
+    uint8_t duty: 2;
 } Envelope;
 
 typedef struct Sweep {
-    unsigned int shift: 3;
-    unsigned int negate: 1;
-    unsigned int period: 3;
-    unsigned int enabled: 1;
+    uint8_t shift: 3;
+    uint8_t negate: 1;
+    uint8_t period: 3;
+    uint8_t enabled: 1;
 } Sweep;
 
 typedef struct LinearCounter {
-    unsigned int linear_counter: 7;
-    unsigned int length_halt: 1;
+    uint8_t linear_counter: 7;
+    uint8_t length_halt: 1;
 } LinearCounter;
 
 typedef struct NoisePeriod {
-    unsigned int period: 4;
-    unsigned int unused: 3;
-    unsigned int loop_noise: 1;
-    unsigned int unused2: 3;
-    unsigned int length_counter: 5;
+    uint8_t period: 4;
+    uint8_t unused: 3;
+    uint8_t loop_noise: 1;
+    uint8_t unused2: 3;
+    uint8_t length_counter: 5;
 } NoisePeriod;
 
 typedef struct DMCControl {

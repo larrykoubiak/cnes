@@ -103,7 +103,7 @@ void bus_step(Bus* bus) {
                 }
             } else {
                 if(bus->cycles % 2 == 0) {
-                    bus->dma_data = cpu_read(bus, (bus->dma_page << 8) || bus->dma_address);
+                    bus->dma_data = cpu_read(bus, (bus->dma_page << 8) | bus->dma_address);
                 } else {
                     bus->ppu.oam.raw[bus->dma_address] = bus->dma_data;
                     bus->dma_address++;

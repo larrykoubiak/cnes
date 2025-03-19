@@ -28,14 +28,14 @@ typedef struct CPU {
     uint8_t             SP;
     union {
         struct {
-            unsigned int C : 1;
-            unsigned int Z : 1;
-            unsigned int I : 1;
-            unsigned int D : 1;
-            unsigned int B : 1;
-            unsigned int U : 1;
-            unsigned int V : 1;
-            unsigned int N : 1;
+            uint8_t C : 1;
+            uint8_t Z : 1;
+            uint8_t I : 1;
+            uint8_t D : 1;
+            uint8_t B : 1;
+            uint8_t U : 1;
+            uint8_t V : 1;
+            uint8_t N : 1;
         };
         uint8_t value;
     } P;

@@ -23,38 +23,38 @@ typedef enum {
 
 typedef union PPUCTRLRegister{
     struct {
-        unsigned int NAMETABLE_X:1;
-        unsigned int NAMETABLE_Y:1;
-        unsigned int VRAM_DIRECTION:1;
-        unsigned int SPRITETABLE:1;
-        unsigned int BGTABLE:1;
-        unsigned int SPRITESIZE:1;
-        unsigned int PPU_EXT:1;
-        unsigned int NMI_VBL:1;
+        uint8_t NAMETABLE_X:1;
+        uint8_t NAMETABLE_Y:1;
+        uint8_t VRAM_DIRECTION:1;
+        uint8_t SPRITETABLE:1;
+        uint8_t BGTABLE:1;
+        uint8_t SPRITESIZE:1;
+        uint8_t PPU_EXT:1;
+        uint8_t NMI_VBL:1;
     };
     uint8_t value;
 } __attribute__((packed)) PPUCTRLRegister;
 
 typedef union PPUMASKRegister{
     struct {
-        unsigned int GREYSCALE:1;
-        unsigned int SHOW_LEFT8_BG:1;
-        unsigned int SHOW_LEFT8_SP:1;
-        unsigned int BG_RENDER:1;
-        unsigned int SP_RENDER:1;
-        unsigned int HL_RED:1;
-        unsigned int HL_GREEN:1;
-        unsigned int HL_BLUE:1;
+        uint8_t GREYSCALE:1;
+        uint8_t SHOW_LEFT8_BG:1;
+        uint8_t SHOW_LEFT8_SP:1;
+        uint8_t BG_RENDER:1;
+        uint8_t SP_RENDER:1;
+        uint8_t HL_RED:1;
+        uint8_t HL_GREEN:1;
+        uint8_t HL_BLUE:1;
     };
     uint8_t value;
 } __attribute__((packed)) PPUMASKRegister;
 
 typedef union PPUSTATRegister {
     struct {
-        unsigned int UNUSED:5;
-        unsigned int SP_OVERFLOW:1;
-        unsigned int SP0_HIT:1;
-        unsigned int VBLANK:1;
+        uint8_t UNUSED:5;
+        uint8_t SP_OVERFLOW:1;
+        uint8_t SP0_HIT:1;
+        uint8_t VBLANK:1;
     };
     uint8_t value;
 } __attribute__((packed)) PPUSTATRegister;

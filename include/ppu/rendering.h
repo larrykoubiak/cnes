@@ -7,11 +7,11 @@ typedef struct PPU PPU;
 
 typedef union SPRITEATTR {
     struct {
-        unsigned int palette:2;
-        unsigned int unused:3;
-        unsigned int priority:1;
-        unsigned int flip_h:1;
-        unsigned int flip_v:1;
+        uint8_t palette:2;
+        uint8_t unused:3;
+        uint8_t priority:1;
+        uint8_t flip_h:1;
+        uint8_t flip_v:1;
     };
     uint8_t value;
 } __attribute__((packed)) SPRITEATTR;
@@ -25,12 +25,12 @@ typedef struct Sprite {
 
 typedef union LOOPYRegister {
     struct {
-        unsigned int coarse_x:5;
-        unsigned int coarse_y:5;
-        unsigned int nametable_x:1;
-        unsigned int nametable_y:1;
-        unsigned int fine_y:3;
-        unsigned int unused:1;
+        uint16_t coarse_x:5;
+        uint16_t coarse_y:5;
+        uint16_t nametable_x:1;
+        uint16_t nametable_y:1;
+        uint16_t fine_y:3;
+        uint16_t unused:1;
     };
     uint16_t value;
 } __attribute__((packed)) LOOPYRegister;
@@ -39,7 +39,7 @@ typedef struct Renderer {
     union {
         uint8_t raw[0x20];
         Sprite sprites[0x8];
-    } secondary_oam[0x8];
+    } secondary_oam;
     uint8_t pixel_buffer[0x100];
     uint8_t framebuffer[0xF000];
     uint8_t framebuffer_rgb[0x2D000];
@@ -58,15 +58,13 @@ typedef struct Renderer {
     uint16_t bg_shifter_attribute_low;
     uint16_t bg_shifter_attribute_high;
     // temp FG variables
-    uint8_t oam_m;
-    uint8_t oam_n;
-    uint8_t sec_oam_index;
     uint8_t sprite_count;
-    bool sprite_eval_done;
     bool sprite_overflow;
+    bool sprite_zero_rendered;
     uint8_t sprite_y;
     uint8_t sprite_shifter_pattern_low[8];
     uint8_t sprite_shifter_pattern_high[8];
+    SPRITEATTR sprite_attributes[8];
     uint8_t sprite_x_counters[8];
     // Internal state
     uint16_t cycle;
@@ -93,5 +91,6 @@ void inc_vert(PPU* ppu);
 void reset_hori(PPU* ppu);
 void reset_vert(PPU* ppu);
 void eval_sprite(PPU* ppu);
+void fetch_sprite(PPU* ppu, int id);
 
 #endif
