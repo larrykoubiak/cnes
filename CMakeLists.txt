@@ -11,7 +11,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 
 # Profiling with gprof (only in profile build)
-set(CMAKE_C_FLAGS_PROFILE "-pg -g -O2")
+set(CMAKE_C_FLAGS_PROFILE "-pg" "-g" "-O2")
 set(CMAKE_EXE_LINKER_FLAGS_PROFILE "-pg")
 
 # CPM
@@ -72,6 +72,13 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_SOURCE_DIR}/2C02G_wiki.pal ${CMAKE_BINARY_DIR}/2C02G_wiki.pal
 )
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_SOURCE_DIR}/arcade-legacy.ttf ${CMAKE_BINARY_DIR}/arcade-legacy.ttf
+)
+
 
 # Enable profiling if PROFILE build type is chosen
 if(CMAKE_BUILD_TYPE STREQUAL "Profile")

@@ -66,6 +66,9 @@ int main(int argc, char *argv[]) {
                 running = 0;
             }
         }
+        while (!bus.ppu.vblank_triggered && !paused) {
+            step(&bus);
+        }
         input_poll();
         uint8_t events = input_get_events();
         if (events & INPUT_EVENT_QUIT) {
