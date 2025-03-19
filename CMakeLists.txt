@@ -1,9 +1,18 @@
 cmake_minimum_required(VERSION 3.30)
 project(cnes C)
 
+# Default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
+
+# Compiler options
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
+
+# Profiling with gprof (only in profile build)
+set(CMAKE_C_FLAGS_PROFILE "-pg -g -O2")
+set(CMAKE_EXE_LINKER_FLAGS_PROFILE "-pg")
 
 # CPM
 file(
@@ -63,3 +72,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_SOURCE_DIR}/2C02G_wiki.pal ${CMAKE_BINARY_DIR}/2C02G_wiki.pal
 )
+
+# Enable profiling if PROFILE build type is chosen
+if(CMAKE_BUILD_TYPE STREQUAL "Profile")
+    message(STATUS "Configuring for Profile build with gprof...")
+    target_compile_options(${PROJECT_NAME} PRIVATE ${CMAKE_C_FLAGS_PROFILE})
+    target_link_options(${PROJECT_NAME} PRIVATE ${CMAKE_EXE_LINKER_FLAGS_PROFILE})
+endif()
