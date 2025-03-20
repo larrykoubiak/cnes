@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
         while (!bus.ppu.vblank_triggered && !paused) {
             step(&bus);
         }
-        input_poll();
+        input_poll(ctx.gamepad);
         uint8_t events = input_get_events();
         if (events & INPUT_EVENT_QUIT) {
             running = false;

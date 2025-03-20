@@ -9,6 +9,7 @@ static uint8_t prev_escape = 0, prev_p = 0, prev_s = 0, prev_d = 0;
 static uint8_t controller_state[2] = {0};
 static uint8_t controller_shift[2] = {0};
 static bool strobe = false;
+static SDL_Gamepad *controller = NULL;
 
 // Map SDL keycodes to NES buttons
 static const SDL_Scancode keymap[8] = {
@@ -21,8 +22,19 @@ static const SDL_Scancode keymap[8] = {
     SDL_SCANCODE_LEFT,
     SDL_SCANCODE_RIGHT
 };
+// Map SDL gamepad buttons to NES buttons
+static const SDL_GamepadButton gamepad_map[8] = {
+    SDL_GAMEPAD_BUTTON_EAST,      // A
+    SDL_GAMEPAD_BUTTON_SOUTH,      // B
+    SDL_GAMEPAD_BUTTON_BACK,   // Select
+    SDL_GAMEPAD_BUTTON_START,  // Start
+    SDL_GAMEPAD_BUTTON_DPAD_UP,
+    SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+    SDL_GAMEPAD_BUTTON_DPAD_LEFT,
+    SDL_GAMEPAD_BUTTON_DPAD_RIGHT
+};
 
-void input_poll() {
+void input_poll(SDL_Gamepad* gamepad) {
     SDL_PumpEvents();  // Update the keyboard state
 
     const bool *keystate = SDL_GetKeyboardState(NULL);
@@ -50,6 +62,13 @@ void input_poll() {
     for (int i = 0; i < 8; i++) {
         if (keystate[keymap[i]]) {
             controller_state[0] |= (1 << i);
+        }
+    }
+    if(gamepad) {
+        for(int i=0;i < 8; i++) {
+            if(SDL_GetGamepadButton(gamepad, gamepad_map[i])) {
+                controller_state[0] |= (1 << i);
+            }
         }
     }
 }

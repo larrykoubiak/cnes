@@ -2,7 +2,7 @@
 #include "frontend/sdl_context.h"
 
 int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const char *title) {
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return -1;
     }
@@ -61,6 +61,16 @@ int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const cha
         return 1;
     }
     ctx->details = SDL_GetPixelFormatDetails(ctx->emu_surface->format);
+    SDL_JoystickID* gamepads = SDL_GetGamepads(NULL);
+    if(gamepads[0]!=0) {
+        ctx->gamepad = SDL_OpenGamepad(gamepads[0]);
+        if(!ctx->gamepad) {
+            printf("Warning: Unable to open game controller: %s\n", SDL_GetError());
+        }    
+    }
+    if(gamepads) {
+        SDL_free(gamepads);
+    }
     return 0;
 }
 
@@ -105,5 +115,6 @@ void sdl_cleanup(sdl_context *ctx) {
     if (ctx->ppu_surface) SDL_DestroySurface(ctx->ppu_surface);
     if (ctx->renderer) SDL_DestroyRenderer(ctx->renderer);
     if (ctx->window) SDL_DestroyWindow(ctx->window);
+    if (ctx->gamepad) SDL_CloseGamepad(ctx->gamepad);
     SDL_Quit();
 }

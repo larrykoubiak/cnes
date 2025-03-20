@@ -13,6 +13,7 @@ typedef struct sdl_context {
     SDL_Texture *texture;
     const SDL_PixelFormatDetails *details;
     TTF_Font *font;
+    SDL_Gamepad *gamepad;
 } sdl_context;
 
 int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const char *title);
