@@ -60,6 +60,7 @@ typedef struct Renderer {
     // temp FG variables
     uint8_t sprite_count;
     bool sprite_overflow;
+    bool sprite_zero_possible;
     bool sprite_zero_rendered;
     uint8_t sprite_y;
     uint8_t sprite_shifter_pattern_low[8];

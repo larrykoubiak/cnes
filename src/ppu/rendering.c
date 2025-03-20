@@ -85,7 +85,6 @@ void render_visible_scanline(PPU* ppu) {
         if(cycle == 257) {
             reset_hori(ppu);
             eval_sprite(ppu);
-            renderer->sprite_zero_rendered = false;
         }
         if((cycle % 8)==0) {
             uint8_t sprite_id = ((cycle-264) >> 3);
@@ -181,13 +180,12 @@ void render_pixel(PPU *ppu) {
                 uint8_t p1 = (renderer->sprite_shifter_pattern_high[i] & 0x80) >> 6;
                 uint8_t pixel = p1 | p0;
                 if (pixel != 0) { // Non-transparent sprite pixel
+                    if(i==0) {
+                        renderer->sprite_zero_rendered = true;
+                    }
                     spr_pixel = pixel;
                     spr_palette = renderer->sprite_attributes[i].palette;
                     spr_priority = (renderer->sprite_attributes[i].priority == 0);
-                    // Set sprite zero hit flag
-                    if (renderer->sprite_zero_rendered && i == 0 && bg_pixel != 0 && renderer->cycle < 256) {
-                        ppu->ppustatus.SP0_HIT = true;
-                    }
                     break; // first opaque sprite pixel found, stop checking
                 }
             }
@@ -205,6 +203,9 @@ void render_pixel(PPU *ppu) {
         final_pixel = bg_pixel;
         final_palette = bg_palette;
     } else { // Both opaque
+        if (renderer->sprite_zero_possible && renderer->sprite_zero_rendered) {
+            ppu->ppustatus.SP0_HIT = 1;
+        }
         if (spr_priority) {
             final_pixel = spr_pixel;
             final_palette = spr_palette + 4;
@@ -329,12 +330,15 @@ void eval_sprite(PPU* ppu) {
 
     renderer->sprite_count = 0;
     renderer->sprite_overflow = false;
-
+    renderer->sprite_zero_possible = false;
     for (int sprite_id = 0; sprite_id < 64; sprite_id++) {
         Sprite sprite = ppu->oam.sprites[sprite_id];
         int diff = (renderer->scanline + 1) - sprite.y;
         if (diff >= 0 && diff < sprite_height) {
             if (renderer->sprite_count < 8) {
+                if(sprite_id==0) {
+                    renderer->sprite_zero_possible = true;
+                }
                 renderer->secondary_oam.sprites[renderer->sprite_count++] = sprite;
             } else {
                 renderer->sprite_overflow = true;
@@ -375,7 +379,6 @@ void fetch_sprite(PPU* ppu, int id) {
     renderer->sprite_shifter_pattern_high[id] = high_byte;
     renderer->sprite_attributes[id] = sprite.attr;
     renderer->sprite_x_counters[id] = sprite.x;
-    renderer->sprite_zero_rendered = (id ==0 && renderer->secondary_oam.sprites[0].tile_id == ppu->oam.sprites[0].tile_id);
 }
 
 void render_rgb(PPU* ppu) {

@@ -38,9 +38,8 @@ uint8_t ppu_register_read(PPU* ppu, uint16_t address) {
     int increment = 0;
     switch(address) {
         case 2:
-            result = (ppu->ppustatus.value & 0xE0) | (ppu->open_bus_val | 0x1F);
+            result = (ppu->ppustatus.value & 0xE0) | (ppu->open_bus_val & 0x1F);
             ppu->ppustatus.VBLANK = 0;
-            ppu->ppustatus.SP0_HIT = 0;
             ppu->renderer.w = 0;
             break;
         case 4:

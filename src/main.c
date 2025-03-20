@@ -1,6 +1,9 @@
 #include "bus.h"
 #include "frontend/sdl_context.h"
 
+#define FPS 60
+#define FRAME_TIME (1000 / FPS)  // ~16.67ms per frame
+
 static char disassembly_cache[0x10000][16];
 
 int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
@@ -47,6 +50,7 @@ void step(Bus* bus) {
 }
 
 int main(int argc, char *argv[]) {
+    uint64_t start_time = SDL_GetTicks();  // Get start time in milliseconds
     Bus bus;
     sdl_context ctx;
     bool running = true;
@@ -99,6 +103,13 @@ int main(int argc, char *argv[]) {
             sdl_render(&ctx, bus.ppu.renderer.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);
             bus.ppu.vblank_triggered=0;
         }
+        // Frame timing logic
+        uint64_t end_time = SDL_GetTicks();
+        uint64_t frame_time = end_time - start_time;
+        if (frame_time < FRAME_TIME) {
+            SDL_Delay(FRAME_TIME - frame_time);  // Delay remaining time to maintain 60 FPS
+        }
+        start_time = SDL_GetTicks();
     }
     free_bus(&bus);
     sdl_cleanup(&ctx);

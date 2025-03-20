@@ -18,10 +18,10 @@ typedef struct {
     uint8_t shift_register;
     union {
         struct {
-            unsigned int mirroring: 2;
-            unsigned int prg_bank_mode: 2;
-            unsigned int chr_bank_mode: 1;
-            unsigned int unused: 3;
+            uint8_t mirroring: 2;
+            uint8_t prg_bank_mode: 2;
+            uint8_t chr_bank_mode: 1;
+            uint8_t unused: 3;
         };
         uint8_t value;
     } control;
@@ -29,6 +29,7 @@ typedef struct {
     uint8_t chr_bank_1;
     uint8_t prg_bank;
     uint8_t prg_ram_enable;
+    uint8_t write_counter;
 } Mapper001State;
 
 extern Mapper MAPPER_001;

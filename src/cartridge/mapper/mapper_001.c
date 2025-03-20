@@ -14,6 +14,7 @@ static void mapper001_init(Cartridge* cart) {
     state->prg_bank = 0;
     state->chr_bank_0 = 0;
     state->chr_bank_1 = 0;
+    state->write_counter = 0;
     cart->mapper->state = state;
     mapper001_update_banks(cart);
 }
@@ -27,10 +28,13 @@ static uint8_t mapper001_prg_read(Cartridge* cart, uint16_t address) {
         case 0:
         case 1:  // 32KB mode
             bank_address = ((state->prg_bank & 0x0E) << 14) + address;
+            break;
         case 2:  // Fixed first bank, switchable upper bank
             bank_address = (address >= 0x4000 ? (state->prg_bank << 14) : 0) + (address & 0x3FFF);
+            break;
         case 3:  // Switchable lower bank, fixed upper bank
             bank_address = (address < 0x4000 ? (state->prg_bank << 14) : ((cart->header.prg_rom_size - 1) << 14)) + (address & 0x3FFF);
+            break;
     }
     return cart->prg_rom[bank_address];
 }
@@ -40,14 +44,15 @@ static void mapper001_prg_write(Cartridge* cart, uint16_t address, uint8_t value
     // Reset shift register on bit 7 set
     if (value & 0x80) {
         state->shift_register = 0x10;
+        state->write_counter = 0;
         return;
     }
     // Shift register logic
-    uint8_t full = state->shift_register & 0x01;
     state->shift_register >>= 1;
     state->shift_register |= (value & 1) << 4;
+    state->write_counter++;
 
-    if (full) {
+    if (state->write_counter==5) {
         uint8_t target_register = (address >> 13) & 0x03;
         switch (target_register) {
             case 0: // Control
@@ -64,22 +69,22 @@ static void mapper001_prg_write(Cartridge* cart, uint16_t address, uint8_t value
                 break;
         }
         state->shift_register = 0x10; // Reset shift register
+        state->write_counter = 0;
         mapper001_update_banks(cart);
     }
 }
 static uint8_t mapper001_chr_read(Cartridge* cart, uint16_t address) {
+    Mapper001State* state = (Mapper001State*)cart->mapper->state;
     if (cart->chr_ram) {
         return cart->chr_ram[address & 0x1FFF];
-    } else {
-        Mapper001State* state = (Mapper001State*)cart->mapper->state;
-        if ((state->control.chr_bank_mode) == 0) {  // 8KB CHR mode
-            return cart->chr_rom[(state->chr_bank_0 & 0x1E) * 0x1000 + (address & 0x1FFF)];
-        } else {  // 4KB CHR mode
-            if (address < 0x1000) {
-                return cart->chr_rom[state->chr_bank_0 * 0x1000 + (address & 0x0FFF)];
-            } else {
-                return cart->chr_rom[state->chr_bank_1 * 0x1000 + (address & 0x0FFF)];
-            }
+    } 
+    if ((state->control.chr_bank_mode) == 0) {  // 8KB CHR mode
+        return cart->chr_rom[((state->chr_bank_0 & 0x1E) * 0x1000) + (address & 0x1FFF)];
+    } else {  // 4KB CHR mode
+        if (address < 0x1000) {
+            return cart->chr_rom[(state->chr_bank_0 * 0x1000) + (address & 0x0FFF)];
+        } else {
+            return cart->chr_rom[(state->chr_bank_1 * 0x1000) + (address & 0x0FFF)];
         }
     }
 }
@@ -103,6 +108,7 @@ static void mapper001_wram_write(Cartridge* cart, uint16_t address, uint8_t valu
 static void mapper001_update_banks(Cartridge* cart) {
     Mapper001State* state = (Mapper001State*)cart->mapper->state;
 }
+
 static void mapper001_free(Cartridge* cart) {
     if (cart->mapper->state) {
         free(cart->mapper->state);
