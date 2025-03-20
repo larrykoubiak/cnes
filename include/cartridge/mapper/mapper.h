@@ -2,6 +2,7 @@
 #define MAPPER_H
 
 #include <stdint.h>
+#include "mirroring.h"
 
 typedef struct Cartridge Cartridge;
 
@@ -9,6 +10,7 @@ typedef void (*InitFunc)(Cartridge* cart);
 typedef uint8_t (*ReadFunc)(Cartridge* cart, uint16_t address);
 typedef void (*WriteFunc)(Cartridge* cart, uint16_t address, uint8_t value);
 typedef void (*FreeFunc)(Cartridge* cart);
+typedef MirroringMode (*MirrorFunc)(Cartridge* cart);
 
 typedef struct Mapper {
     InitFunc init;
@@ -19,6 +21,7 @@ typedef struct Mapper {
     ReadFunc read_wram;
     WriteFunc write_wram;
     FreeFunc free;
+    MirrorFunc get_mirroring;
     union {
         void* state;
         uint8_t storage[8];

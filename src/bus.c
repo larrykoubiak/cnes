@@ -12,7 +12,7 @@ int init_bus(Bus* bus, const char* filename) {
         return 1;
     }
     cpu_init(&bus->cpu, bus);
-    ppu_init(&bus->ppu, bus, cart_get_mirroring_mode(&bus->cart.header));
+    ppu_init(&bus->ppu, bus, bus->cart.mapper->get_mirroring(&bus->cart));
     memset(bus->ram,0, sizeof(bus->ram));
     return 0;
 }
@@ -75,6 +75,7 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
     }
     if (address == 0x4016) {
         controller_write(address, value); // Joystick strobe # TODO
+        return;
     }
     if (address == 0x4017) {
         apu_write(&bus->apu, address & 0x1F, value);
@@ -85,9 +86,14 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
     }
     if (address < 0x8000) {
         bus->cart.mapper->write_wram(&bus->cart, address & 0x1FFF, value); //Usually PRG-RAM if present
+        return;
     }
     if (address < 0x10000) {
         bus->cart.mapper->write_prg(&bus->cart, address & 0x7FFF, value);
+        MirroringMode mm = bus->cart.mapper->get_mirroring(&bus->cart);
+        if(mm != bus->ppu.mirroring) {
+            bus->ppu.mirroring = mm;
+        }
         return;
     }
     return;
@@ -122,18 +128,4 @@ void bus_step(Bus* bus) {
 
 void bus_trigger_nmi(Bus* bus) {
     bus->cpu.nmi_pending = 1;
-}
-
-MirroringMode cart_get_mirroring_mode(const iNESHeader* header) {
-    if (header->alternate_layout) {
-        return FOUR_SCREEN;
-    }
-    switch(header->nametable_layout) {
-        case HORIZONTAL_LAYOUT:
-            return VERTICAL;
-        case VERTICAL_LAYOUT:
-            return HORIZONTAL;
-        default:
-            return HORIZONTAL;
-    }
 }

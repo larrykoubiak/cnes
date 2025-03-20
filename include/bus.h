@@ -29,6 +29,4 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value);
 void bus_step(Bus* bus);
 void bus_trigger_nmi(Bus* bus);
 
-MirroringMode cart_get_mirroring_mode(const iNESHeader* header);
-
 #endif

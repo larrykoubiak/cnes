@@ -8,14 +8,6 @@
 typedef struct Bus Bus;
 
 typedef enum {
-    HORIZONTAL = 0,
-    VERTICAL = 1,
-    FOUR_SCREEN = 8,
-    SINGLE_SCREEN_LOWER = 9,
-    SINGLE_SCREEN_UPPER = 10
-} MirroringMode;
-
-typedef enum {
     LOAD_COLORS_OK = 0,
     LOAD_COLORS_OK_FILE_ERROR = 1,
     LOAD_COLORS_OK_READ_ERROR = 2

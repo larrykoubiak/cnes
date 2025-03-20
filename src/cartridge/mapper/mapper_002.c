@@ -43,6 +43,20 @@ static void mapper002_wram_write(Cartridge* cart, uint16_t address, uint8_t valu
     }
 }
 
+MirroringMode mapper002_get_mirroring(Cartridge* cart) {
+    if (cart->header.alternate_layout) {
+        return FOUR_SCREEN;
+    }
+    switch(cart->header.nametable_layout) {
+        case HORIZONTAL_LAYOUT:
+            return VERTICAL;
+        case VERTICAL_LAYOUT:
+            return HORIZONTAL;
+        default:
+            return HORIZONTAL;
+    }
+}
+
 static void mapper002_free(Cartridge* cart) {
     if (cart->chr_ram) {
         free(cart->chr_ram);
@@ -58,6 +72,7 @@ Mapper MAPPER_002 = {
     .write_chr = mapper002_chr_write,
     .read_wram = mapper002_wram_read,
     .write_wram = mapper002_wram_write,
+    .get_mirroring = mapper002_get_mirroring,
     .free = mapper002_free,
-    .storage = {0}
+    .storage = {0,0,0,0,0,0,0,0}
 };

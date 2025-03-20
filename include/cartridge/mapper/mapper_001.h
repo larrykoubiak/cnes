@@ -11,7 +11,7 @@ static uint8_t mapper001_chr_read(Cartridge* cart, uint16_t address);
 static void mapper001_chr_write(Cartridge* cart, uint16_t address, uint8_t value);
 static uint8_t mapper001_wram_read(Cartridge* cart, uint16_t address);
 static void mapper001_wram_write(Cartridge* cart, uint16_t address, uint8_t value);
-static void mapper001_update_banks(Cartridge* cart);
+static void mapper001_update_banks(Cartridge* cart, uint8_t target_register);
 static void mapper001_free(Cartridge* cart);
 
 typedef struct {
@@ -27,7 +27,8 @@ typedef struct {
     } control;
     uint8_t chr_bank_0;
     uint8_t chr_bank_1;
-    uint8_t prg_bank;
+    uint8_t prg_bank_0;
+    uint8_t prg_bank_1;
     uint8_t prg_ram_enable;
     uint8_t write_counter;
 } Mapper001State;
