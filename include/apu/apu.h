@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#define APU_SAMPLE_BUFFER_SIZE 512
+#define APU_FIXED_SHIFT 24
+#define CPU_FREQ_NTSC 1789773
+
 typedef struct Timer {
     uint16_t timer: 11;
     uint8_t length_counter: 5;
@@ -80,6 +84,7 @@ typedef union DMCChannel {
 } DMCChannel;
 
 typedef struct APU {
+    // registers
     PulseChannel pulse1;
     PulseChannel pulse2;
     TriangleChannel triangle;
@@ -87,10 +92,27 @@ typedef struct APU {
     DMCChannel dmc;
     uint8_t status;
     uint8_t frame_counter;
+    // counters
+    uint64_t cycle_count;
+    uint64_t frame_sequencer_next;
+    uint8_t frame_step;
+    // audio sampling
+    int sample_rate;
+    uint64_t sample_rate_step;
+    uint64_t sample_timer;
+    // ring buffer
+    int16_t sample_buffer[APU_SAMPLE_BUFFER_SIZE];
+    uint16_t sample_write_idx;
+    uint16_t sample_read_idx;
+
 } APU;
 
 void apu_reset(APU* apu);
+void apu_init(APU* apu, int sample_rate);
 void apu_write(APU* apu, uint16_t addr, uint8_t value);
 uint8_t apu_read(APU* apu, uint16_t addr);
+void apu_step(APU* apu);
+void apu_update_frame_sequencer(APU* apu);
+void apu_output_sample(APU* apu);
 
 #endif

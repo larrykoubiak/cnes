@@ -102,6 +102,7 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
 void bus_step(Bus* bus) {
     ppu_step(&bus->ppu);
     if((bus->cycles % 3) == 0) {
+        apu_step(&bus->apu);
         if(bus->dma_transfer) {
             if(bus->dma_dummy) {
                 if(bus->cycles % 2 == 1) {
