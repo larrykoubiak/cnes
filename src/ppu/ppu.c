@@ -127,7 +127,7 @@ uint8_t ppu_read(PPU* ppu, uint16_t address) {
         return ppu->bus->cart.mapper->read_chr(&ppu->bus->cart, address & 0x1FFF);
     } else if (address < 0x3F00) {
         uint16_t idx = map_nametable_address(address, ppu->mirroring);
-        return ppu->vram[idx];        return ppu->vram[address];
+        return ppu->vram[idx];
     } else if (address < 0x4000) {
         address = address & 0x1F;
         if ((address & 0x03) == 0x00) {
