@@ -13,6 +13,22 @@ static LoadColorsResult load_colors(PPU* ppu, const char* filename) {
     return LOAD_COLORS_OK;
 }
 
+static inline uint16_t map_nametable_address(uint16_t address, MirroringMode mode) {
+    uint16_t offset = address & 0xFFF;
+    uint16_t table = offset >> 10;
+    uint16_t fine = offset & 0x03FF;
+    switch(mode) {
+        case HORIZONTAL:
+            return (table < 2) ? fine : (fine + 0x400);
+        case VERTICAL:
+            return (table == 0 || table == 2) ? fine : (fine + 0x400);
+        case SINGLE_SCREEN_LOWER:
+            return fine;
+        case SINGLE_SCREEN_UPPER:
+            return fine + 0x400;
+    }
+}
+
 int ppu_init(PPU* ppu, Bus* bus, MirroringMode mode) {
     memset(ppu, 0, sizeof(PPU));
     LoadColorsResult result = load_colors(ppu, "2C02G_wiki.pal");
@@ -110,17 +126,8 @@ uint8_t ppu_read(PPU* ppu, uint16_t address) {
     if (address < 0x2000) {
         return ppu->bus->cart.mapper->read_chr(&ppu->bus->cart, address & 0x1FFF);
     } else if (address < 0x3F00) {
-        address = address & 0x0FFF;
-        if (ppu->mirroring == HORIZONTAL) {
-            address &= 0x0BFF;
-        } else if (ppu->mirroring == VERTICAL) {
-            address &= 0x07FF;
-        } else if (ppu->mirroring == SINGLE_SCREEN_LOWER) {
-            address = address & 0x03FF;
-        } else if (ppu->mirroring == SINGLE_SCREEN_UPPER) {
-            address = (address & 0x03FF) + 0x0400;
-        }
-        return ppu->vram[address];
+        uint16_t idx = map_nametable_address(address, ppu->mirroring);
+        return ppu->vram[idx];        return ppu->vram[address];
     } else if (address < 0x4000) {
         address = address & 0x1F;
         if ((address & 0x03) == 0x00) {
@@ -135,22 +142,8 @@ void ppu_write(PPU* ppu, uint16_t address, uint8_t value) {
     if (address < 0x2000) {
         ppu->bus->cart.mapper->write_chr(&ppu->bus->cart, address & 0x1FFF, value);
     } else if (address < 0x3F00) {
-        uint16_t mirrored = (address - 0x2000) & 0x0FFF;
-        if (ppu->mirroring == VERTICAL) {
-            // Write to both vertical-mirrored regions
-            ppu->vram[(mirrored & 0x07FF)] = value;  // Base region
-            ppu->vram[(mirrored & 0x07FF) + 0x0800] = value;  // Mirrored region
-        } else if (ppu->mirroring == HORIZONTAL) {
-            // Write to both horizontal-mirrored regions
-            ppu->vram[(mirrored & 0x03FF)] = value;  // Base region
-            ppu->vram[(mirrored & 0x03FF) + 0x0400] = value;  // Mirrored region
-        } else if (ppu->mirroring == SINGLE_SCREEN_LOWER) {
-            // Everything mirrors to lower nametable
-            ppu->vram[(mirrored & 0x03FF)] = value;
-        } else if (ppu->mirroring == SINGLE_SCREEN_UPPER) {
-            // Everything mirrors to upper nametable
-            ppu->vram[(mirrored & 0x03FF) + 0x0400] = value;
-        }
+        uint16_t idx = map_nametable_address(address, ppu->mirroring);
+        ppu->vram[idx] = value;
     } else if (address < 0x4000) {
         address = address & 0x1F;
         if (address == 0x10) {
