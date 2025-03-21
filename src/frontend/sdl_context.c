@@ -61,12 +61,18 @@ int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const cha
         return 1;
     }
     ctx->details = SDL_GetPixelFormatDetails(ctx->emu_surface->format);
-    SDL_JoystickID* gamepads = SDL_GetGamepads(NULL);
-    if(gamepads[0]!=0) {
+    // gamepad support
+    int num_gamepads = 0;
+    SDL_JoystickID* gamepads = SDL_GetGamepads(&num_gamepads);
+    if(gamepads && num_gamepads > 0) {
         ctx->gamepad = SDL_OpenGamepad(gamepads[0]);
         if(!ctx->gamepad) {
             printf("Warning: Unable to open game controller: %s\n", SDL_GetError());
-        }    
+        } else {
+            printf("Gamepad connected: %s\n", SDL_GetGamepadName(ctx->gamepad));
+        }
+    } else {
+        printf("Gamepad found: %d\n", num_gamepads);
     }
     if(gamepads) {
         SDL_free(gamepads);
