@@ -17,19 +17,19 @@ void apu_write(APU* apu, uint16_t addr, uint8_t value) {
         uint8_t field_id = addr & 0x03;
         switch(reg_id) {
             case 0:
-                apu->pulse1.raw[field_id] = value;
+                pulse_write(&apu->pulse1, reg_id, value);
                 break;
            case 1:
-                apu->pulse2.raw[field_id] = value;
+                pulse_write(&apu->pulse2, reg_id, value);
                 break;
             case 2:
-                apu->triangle.raw[field_id] = value;
+                triangle_write(&apu->triangle, reg_id, value);
                 break;
             case 3:
-                apu->noise.raw[field_id] = value;
+                noise_write(&apu->noise, reg_id, value);
                 break;
             case 4:
-                apu->dmc.raw[field_id] = value;
+                dmc_write(&apu->dmc, reg_id, value);
                 break;
             }
     } else if(addr==0x15){

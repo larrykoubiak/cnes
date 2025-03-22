@@ -28,6 +28,10 @@ set(LIBS)
 set(CNES_SOURCES
     src/main.c
     src/apu/apu.c
+    src/apu/pulse.c
+    src/apu/triangle.c
+    src/apu/noise.c
+    src/apu/dmc.c
     src/cpu/cpu.c
     src/cpu/addressing_modes.c
     src/cpu/instructions.c

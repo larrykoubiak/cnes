@@ -1,87 +1,11 @@
 #ifndef APU_H
 #define APU_H
 
-#include <stdint.h>
-
-#define APU_SAMPLE_BUFFER_SIZE 512
-#define APU_FIXED_SHIFT 24
-#define CPU_FREQ_NTSC 1789773
-
-typedef struct Timer {
-    uint16_t timer: 11;
-    uint8_t length_counter: 5;
-} Timer;
-
-typedef struct Envelope {
-    uint8_t volume: 4;
-    uint8_t constant_volume: 1;
-    uint8_t loop_envelope: 1;
-    uint8_t duty: 2;
-} Envelope;
-
-typedef struct Sweep {
-    uint8_t shift: 3;
-    uint8_t negate: 1;
-    uint8_t period: 3;
-    uint8_t enabled: 1;
-} Sweep;
-
-typedef struct LinearCounter {
-    uint8_t linear_counter: 7;
-    uint8_t length_halt: 1;
-} LinearCounter;
-
-typedef struct NoisePeriod {
-    uint8_t period: 4;
-    uint8_t unused: 3;
-    uint8_t loop_noise: 1;
-    uint8_t unused2: 3;
-    uint8_t length_counter: 5;
-} NoisePeriod;
-
-typedef struct DMCControl {
-    uint8_t rate_index: 4;
-    uint8_t unused: 2;
-    uint8_t loop_sample: 1;
-    uint8_t irq_enable: 1;
-} DMCControl;
-
-typedef union PulseChannel {
-    unsigned char raw[4];
-    struct {
-        Envelope envelope;
-        Sweep sweep;
-        Timer timer;
-    };
-} PulseChannel;
-
-typedef union TriangleChannel {
-    unsigned char raw[4];
-    struct {
-        LinearCounter counter;
-        unsigned char unused;
-        Timer timer;
-    };
-} TriangleChannel;
-
-typedef union NoiseChannel {
-    unsigned char raw[4];
-    struct {
-        Envelope envelope;
-        unsigned char unused;
-        NoisePeriod period;
-    };
-} NoiseChannel;
-
-typedef union DMCChannel {
-    unsigned char raw[4];
-    struct {
-        DMCControl control;
-        unsigned char counter;
-        unsigned char address;
-        unsigned char length;
-    };
-} DMCChannel;
+#include "apu/apu_bitfields.h"
+#include "apu/pulse.h"
+#include "apu/triangle.h"
+#include "apu/noise.h"
+#include "apu/dmc.h"
 
 typedef struct APU {
     // registers
@@ -104,7 +28,6 @@ typedef struct APU {
     int16_t sample_buffer[APU_SAMPLE_BUFFER_SIZE];
     uint16_t sample_write_idx;
     uint16_t sample_read_idx;
-
 } APU;
 
 void apu_reset(APU* apu);
