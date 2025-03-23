@@ -42,10 +42,14 @@ set(CNES_SOURCES
     src/cartridge/mapper/mapper_001.c
     src/cartridge/mapper/mapper_002.c
     src/cartridge/cartridge.c
-    src/input/input.c
+    src/controller/controller.c
     src/ppu/ppu.c
     src/ppu/rendering.c
     src/frontend/sdl_context.c
+    src/frontend/audio.c
+    src/frontend/input.c
+    src/frontend/text.c
+    src/frontend/video.c
 )
 
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")

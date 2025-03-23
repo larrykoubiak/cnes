@@ -11,6 +11,7 @@ int init_bus(Bus* bus, const char* filename) {
         fprintf(stderr, "Error during cartridge initialization");
         return 1;
     }
+    controller_init(&bus->controller);
     cpu_init(&bus->cpu, bus);
     ppu_init(&bus->ppu, bus, bus->cart.mapper->get_mirroring(&bus->cart));
     memset(bus->ram,0, sizeof(bus->ram));
@@ -36,7 +37,7 @@ uint8_t cpu_read(Bus* bus, uint16_t address) {
         return 0;
     }
     if (address < 0x4018) {
-        return controller_read(address);
+        return controller_read(&bus->controller, address);
     }
     if (address < 0x6000) {
         return 0; //Unknown, possibly ROM
@@ -74,7 +75,7 @@ void cpu_write(Bus* bus, uint16_t address, uint8_t value) {
         return;
     }
     if (address == 0x4016) {
-        controller_write(address, value); // Joystick strobe # TODO
+        controller_write(&bus->controller, address, value); // Joystick strobe # TODO
         return;
     }
     if (address == 0x4017) {

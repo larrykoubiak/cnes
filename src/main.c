@@ -1,10 +1,4 @@
-#include "bus.h"
-#include "frontend/sdl_context.h"
-
-#define FPS 60
-#define FRAME_TIME (1000 / FPS)  // ~16.67ms per frame
-
-static char disassembly_cache[0x10000][16];
+#include "main.h"
 
 int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
     if (argc < 2) {
@@ -20,6 +14,8 @@ int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
         return result_sdl;
     }
     memset(&disassembly_cache,0, sizeof(disassembly_cache));
+    cpu_reset(&bus->cpu);
+    ppu_reset(&bus->ppu);
     return 0;
 }
 
@@ -50,64 +46,55 @@ void step(Bus* bus) {
 }
 
 int main(int argc, char *argv[]) {
-    uint64_t start_time = SDL_GetTicks();  // Get start time in milliseconds
+    uint64_t start_time = SDL_GetTicks();
     Bus bus;
     sdl_context ctx;
     bool running = true;
     bool paused = false;
-    void *pixels;
-    int pitch;
+    uint8_t events = 0;
     if (init(&bus, &ctx, argc, argv) != 0) {
         fprintf(stderr, "Initialization failed.\n");
         return 1;
     }
-    cpu_reset(&bus.cpu);
-    ppu_reset(&bus.ppu);
-    SDL_Event event;
     while (running) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT) {
-                running = 0;
-            }
-        }
+        // Loop for 1 frame or until paused
         while (!bus.ppu.vblank_triggered && !paused) {
             step(&bus);
         }
-        input_poll(ctx.gamepad);
-        uint8_t events = input_get_events();
-        if (events & INPUT_EVENT_QUIT) {
+        // Process events
+        events = sdl_update(&ctx, &bus.controller.controller_state[0]);
+        if (events & EVENT_QUIT) {
             running = false;
         }
-        if (events & INPUT_EVENT_PAUSE) {
+        if (events & EVENT_PAUSE) {
             paused = !paused;
         }
-        if (events & INPUT_EVENT_DUMP) {
+        if (events & EVENT_DUMP) {
             save_disassembly_cache();
         }
-        if(!paused)
+        // End of frame events
+        if(paused)
         {
-            step(&bus);
-        } else{
             render_rgb(&bus.ppu);
-            if(events & INPUT_EVENT_STEP) {
+            // Skip till next instruction
+            if(events & EVENT_STEP) {
                 do {
                     step(&bus);
                 } while(bus.cpu.cycles>0);
                 do {
                     step(&bus);
                 } while(bus.cpu.cycles==0);
-
             }
         }
-        if(bus.ppu.vblank_triggered==1 || paused) {
-            sdl_render(&ctx, bus.ppu.renderer.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);
+        sdl_render(&ctx, bus.ppu.renderer.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);
+        if(bus.ppu.vblank_triggered==1) {
             bus.ppu.vblank_triggered=0;
         }
         // Frame timing logic
         uint64_t end_time = SDL_GetTicks();
         uint64_t frame_time = end_time - start_time;
         if (frame_time < FRAME_TIME) {
-            SDL_Delay(FRAME_TIME - frame_time);  // Delay remaining time to maintain 60 FPS
+            SDL_Delay(FRAME_TIME - frame_time);
         }
         start_time = SDL_GetTicks();
     }

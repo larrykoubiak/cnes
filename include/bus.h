@@ -5,13 +5,14 @@
 #include "apu/apu.h"
 #include "cartridge/cartridge.h"
 #include "cpu/cpu.h"
-#include "input/input.h"
+#include "controller/controller.h"
 #include "ppu/ppu.h"
 
 typedef struct Bus {
     uint8_t ram[0x800];  //2KB RAM
     APU apu;
     Cartridge cart;
+    Controller controller;
     CPU cpu;
     PPU ppu;
     uint64_t cycles;

@@ -2,22 +2,29 @@
 #define SDL_CONTEXT_H
 
 #include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
+#include "frontend/audio.h"
+#include "frontend/input.h"
+#include "frontend/text.h"
+#include "frontend/video.h"
 
-typedef struct sdl_context {
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Surface *ppu_surface;
-    SDL_Surface *disasm_surface;
-    SDL_Surface *emu_surface;
-    SDL_Texture *texture;
-    const SDL_PixelFormatDetails *details;
-    TTF_Font *font;
-    SDL_Gamepad *gamepad;
+#define FPS 60
+#define FRAME_TIME (1000 / FPS)  // ~16.67ms per frame
+
+#define EVENT_QUIT  (1 << 0)
+#define EVENT_DUMP  (1 << 1)
+#define EVENT_PAUSE (1 << 2)
+#define EVENT_STEP  (1 << 3)
+
+typedef struct {
+    Audio_Frontend audio;
+    Input_Frontend input;
+    Text_Frontend text;
+    Video_Frontend video;
 } sdl_context;
 
 int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const char *title);
-void sdl_render(sdl_context *ctx, uint8_t *framebuffer, char (*disasm)[16], uint16_t PC, bool paused);
+uint8_t sdl_update(sdl_context *ctx, uint8_t *controller_state);
+void sdl_render(sdl_context* ctx, uint8_t* framebuffer, char (*disasm)[16], uint16_t PC, bool paused);
 void sdl_cleanup(sdl_context *ctx);
 
 #endif
