@@ -33,6 +33,8 @@ void sdl_render(sdl_context* ctx, uint8_t* framebuffer, char (*disasm)[16], uint
     video_clear(&ctx->video, ctx->background_color);
     if(paused) {
         text_update(&ctx->text, disasm, PC);
+    } else {
+        audio_update(&ctx->audio);
     }
     video_update(&ctx->video, framebuffer);
 }
