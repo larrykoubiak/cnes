@@ -47,14 +47,14 @@ int video_init(Video_Frontend *video, int width, int height, const char *title) 
         return -1;
     }
     video->details = SDL_GetPixelFormatDetails(video->emu_surface->format);
-    video->background_color = SDL_MapRGB(video->details,NULL,0,0,0);
     return 0;
 }
 
+void video_clear(Video_Frontend *video, uint32_t color) {
+    SDL_FillSurfaceRect(video->emu_surface, NULL, color);
+}
+
 void video_update(Video_Frontend *video, uint8_t *framebuffer) {
-    // clear surfaces
-    SDL_FillSurfaceRect(video->emu_surface, NULL, video->background_color);
-    SDL_FillSurfaceRect(video->disasm_surface, NULL, video->background_color);
     // render ppu
     SDL_memcpy(video->ppu_surface->pixels, framebuffer, 256 * 240 * 3);
     SDL_Rect ppu_rect = {0,0,256,240};

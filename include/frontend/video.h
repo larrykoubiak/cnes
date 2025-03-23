@@ -11,10 +11,10 @@ typedef struct {
     SDL_Surface *emu_surface;
     SDL_Texture *texture;
     const SDL_PixelFormatDetails *details;
-    uint32_t background_color;
 } Video_Frontend;
 
 int video_init(Video_Frontend *video, int width, int height, const char *title);
+void video_clear(Video_Frontend *video, uint32_t color);
 void video_update(Video_Frontend *video, uint8_t *framebuffer);
 void video_cleanup(Video_Frontend *video);
 #endif

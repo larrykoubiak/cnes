@@ -4,16 +4,20 @@
 int text_init(Text_Frontend *text, SDL_Surface *disasm_surface) {
     if (!TTF_Init()) {
         printf("TTF_Init Error: %s\n", SDL_GetError());
-        return -1;
         SDL_Quit();
+        return -1;
     }
     text->font = TTF_OpenFont("arcade-legacy.ttf", 10.0f);
     if (!text->font) {
         printf("Failed to load font: %s\n", SDL_GetError());
-        return 1;
         SDL_Quit();
+        return -1;
     }
     text->disasm_surface = disasm_surface;
+}
+
+void text_clear(Text_Frontend *text, uint32_t color) {
+    SDL_FillSurfaceRect(text->disasm_surface, NULL, color);
 }
 
 void text_update(Text_Frontend *text, char (*disasm)[16], uint16_t PC) {

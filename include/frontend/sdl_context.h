@@ -20,6 +20,7 @@ typedef struct {
     Input_Frontend input;
     Text_Frontend text;
     Video_Frontend video;
+    uint32_t background_color;
 } sdl_context;
 
 int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const char *title);

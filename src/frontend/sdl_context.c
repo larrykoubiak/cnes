@@ -10,6 +10,8 @@ int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const cha
     input_init(&ctx->input);
     video_init(&ctx->video, width, height, title);
     text_init(&ctx->text, ctx->video.disasm_surface);
+    ctx->background_color =  SDL_MapRGB(ctx->video.details,NULL,0,0,0);
+
     return 0;
 }
 
@@ -27,6 +29,8 @@ uint8_t sdl_update(sdl_context *ctx, uint8_t *controller_state) {
 }
 
 void sdl_render(sdl_context* ctx, uint8_t* framebuffer, char (*disasm)[16], uint16_t PC, bool paused) {
+    text_clear(&ctx->text, ctx->background_color);
+    video_clear(&ctx->video, ctx->background_color);
     if(paused) {
         text_update(&ctx->text, disasm, PC);
     }
