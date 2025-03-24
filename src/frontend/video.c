@@ -30,7 +30,7 @@ int video_init(Video_Frontend *video, int width, int height, const char *title) 
         SDL_Quit();
         return -1;
     }
-    video->emu_surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGB24);
+    video->emu_surface = SDL_CreateSurface(512, 240, SDL_PIXELFORMAT_RGB24);
     if(!video->emu_surface) {
         printf("SDL_CreateSurface Error: %s\n", SDL_GetError());
         SDL_DestroyRenderer(video->renderer);
@@ -38,7 +38,7 @@ int video_init(Video_Frontend *video, int width, int height, const char *title) 
         SDL_Quit();
         return -1;
     }
-    video->texture = SDL_CreateTexture(video->renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, width, height);
+    video->texture = SDL_CreateTexture(video->renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 512, 240);
     if (!video->texture) {
         printf("SDL_CreateTexture Error: %s\n", SDL_GetError());
         SDL_DestroyRenderer(video->renderer);

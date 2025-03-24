@@ -12,7 +12,7 @@ int audio_init(Audio_Frontend* audio) {
         SDL_Quit();
         return -1;
     }
-    SDL_zero(audio->buffer);
+    SDL_memset(audio->buffer, 128, 1470);
     audio->read_pos = 0;
     audio->write_pos = 0;
     audio->sample_pos = 0;
@@ -21,24 +21,24 @@ int audio_init(Audio_Frontend* audio) {
 }
 int audio_update(Audio_Frontend* audio) {
     // TEST: write sample data
-    for(int i=0; i < 735; i++) {
-        uint8_t sample = 0;
-        if(((audio->sample_pos % 100) / 50)==0) {
-            sample += 0x60;
-        };
-        if((audio->sample_pos / 100)==0) {
-            sample += 0x20;
-        };
-        audio->buffer[audio->write_pos] = sample;
-        audio->write_pos++;
-        if(audio->write_pos>=1470) {
-            audio->write_pos -= 1470;
-        }
-        audio->sample_pos++;
-        if(audio->sample_pos == 200) {
-            audio->sample_pos = 0;
-        }
-    }
+    // for(int i=0; i < 735; i++) {
+    //     uint8_t sample = 0;
+    //     if(((audio->sample_pos % 100) / 50)==0) {
+    //         sample += 0x60;
+    //     };
+    //     if((audio->sample_pos / 100)==0) {
+    //         sample += 0x20;
+    //     };
+    //     audio->buffer[audio->write_pos] = sample;
+    //     audio->write_pos++;
+    //     if(audio->write_pos>=1470) {
+    //         audio->write_pos -= 1470;
+    //     }
+    //     audio->sample_pos++;
+    //     if(audio->sample_pos == 200) {
+    //         audio->sample_pos = 0;
+    //     }
+    // }
     // copy to stream
     int8_t *read_buffer = &audio->buffer[audio->read_pos];
     SDL_PutAudioStreamData(audio->stream, read_buffer,735);

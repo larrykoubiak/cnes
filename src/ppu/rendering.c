@@ -153,6 +153,9 @@ void render_prerender_scanline(PPU* ppu) {
                 break;
         }
     }
+    if(cycle == 339 && (ppu->ppumask.BG_RENDER || ppu->ppumask.SP_RENDER) && renderer->frame_odd) {
+        renderer->cycle++;
+    }
 }
 
 void render_pixel(PPU *ppu) {

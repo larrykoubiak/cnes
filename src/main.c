@@ -9,7 +9,7 @@ int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
     if (result_bus != 0) {
         return result_bus;
     }
-    int result_sdl = sdl_init(ctx, bus->ppu.colors, 512, 240, "NES Emulator");
+    int result_sdl = sdl_init(ctx, bus->ppu.colors, 1536, 720, "NES Emulator");
     if (result_sdl != 0) {
         return result_sdl;
     }

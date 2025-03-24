@@ -41,6 +41,7 @@ set(CNES_SOURCES
     src/cartridge/mapper/mapper_000.c
     src/cartridge/mapper/mapper_001.c
     src/cartridge/mapper/mapper_002.c
+    src/cartridge/mapper/mapper_003.c
     src/cartridge/cartridge.c
     src/controller/controller.c
     src/ppu/ppu.c
