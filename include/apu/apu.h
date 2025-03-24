@@ -6,13 +6,13 @@
 #include "apu/triangle.h"
 #include "apu/noise.h"
 #include "apu/dmc.h"
+#include "utils/ring_buffer.h"
 
 static const bool clock_length_sweep_4step[4] = {false, true, false, true};
 static const bool clock_length_sweep_5step[5] = {false, true, false, false, true};
 
 static const bool clock_envelope_4step[4] = {true, true, true, true};
 static const bool clock_envelope_5step[5] = {true, true, true, false, true};
-
 
 typedef struct APU {
     // registers
@@ -33,10 +33,8 @@ typedef struct APU {
     int sample_rate;
     uint64_t sample_rate_step;
     uint64_t sample_timer;
-    // ring buffer
-    int16_t sample_buffer[APU_SAMPLE_BUFFER_SIZE];
-    uint16_t sample_write_idx;
-    uint16_t sample_read_idx;
+    // buffer
+    ring_buffer sample_buffer;
 } APU;
 
 void apu_reset(APU* apu);

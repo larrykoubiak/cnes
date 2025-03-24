@@ -28,13 +28,13 @@ uint8_t sdl_update(sdl_context *ctx, uint8_t *controller_state) {
     return events;
 }
 
-void sdl_render(sdl_context* ctx, uint8_t* framebuffer, char (*disasm)[16], uint16_t PC, bool paused) {
+void sdl_render(sdl_context* ctx, bool paused, uint8_t* framebuffer, ring_buffer* audio_buffer, char (*disasm)[16], uint16_t PC) {
     text_clear(&ctx->text, ctx->background_color);
     video_clear(&ctx->video, ctx->background_color);
     if(paused) {
         text_update(&ctx->text, disasm, PC);
     } else {
-        audio_update(&ctx->audio);
+        audio_update(&ctx->audio, audio_buffer);
     }
     video_update(&ctx->video, framebuffer);
 }

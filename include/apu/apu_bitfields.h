@@ -3,10 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#define APU_SAMPLE_BUFFER_SIZE 1470
-#define APU_FIXED_SHIFT 24
-#define CPU_FREQ_NTSC 1789773
+#include "utils/constants.h"
 
 static uint8_t length_table[32] = {
     10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,

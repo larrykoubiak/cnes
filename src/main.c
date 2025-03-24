@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
                 } while(bus.cpu.cycles==0);
             }
         }
-        sdl_render(&ctx, bus.ppu.renderer.framebuffer_rgb, disassembly_cache, bus.cpu.PC, paused);
+        sdl_render(&ctx, paused, bus.ppu.renderer.framebuffer_rgb, &bus.apu.sample_buffer, disassembly_cache, bus.cpu.PC);
         if(bus.ppu.vblank_triggered==1) {
             bus.ppu.vblank_triggered=0;
         }

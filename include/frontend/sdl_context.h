@@ -6,14 +6,8 @@
 #include "frontend/input.h"
 #include "frontend/text.h"
 #include "frontend/video.h"
-
-#define FPS 60
-#define FRAME_TIME (1000 / FPS)  // ~16.67ms per frame
-
-#define EVENT_QUIT  (1 << 0)
-#define EVENT_DUMP  (1 << 1)
-#define EVENT_PAUSE (1 << 2)
-#define EVENT_STEP  (1 << 3)
+#include "utils/constants.h"
+#include "utils/ring_buffer.h"
 
 typedef struct {
     Audio_Frontend audio;
@@ -25,7 +19,7 @@ typedef struct {
 
 int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const char *title);
 uint8_t sdl_update(sdl_context *ctx, uint8_t *controller_state);
-void sdl_render(sdl_context* ctx, uint8_t* framebuffer, char (*disasm)[16], uint16_t PC, bool paused);
+void sdl_render(sdl_context* ctx, bool paused, uint8_t* framebuffer, ring_buffer* audio_buffer, char (*disasm)[16], uint16_t PC);
 void sdl_cleanup(sdl_context *ctx);
 
 #endif

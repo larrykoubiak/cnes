@@ -51,6 +51,7 @@ set(CNES_SOURCES
     src/frontend/input.c
     src/frontend/text.c
     src/frontend/video.c
+    src/utils/ring_buffer.c
 )
 
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.8")

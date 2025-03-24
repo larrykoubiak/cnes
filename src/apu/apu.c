@@ -34,6 +34,11 @@ void apu_write(APU* apu, uint16_t addr, uint8_t value) {
             }
     } else if(addr==0x15){
         apu->status = value;
+        apu->pulse1.enabled = value & 0x01;
+        apu->pulse2.enabled = value & 0x02;
+        apu->triangle.enabled = value & 0x04;
+        apu->noise.enabled = value & 0x08;
+        apu->dmc.enabled = value & 0x10;
     } else if(addr==0x17){
         apu->frame_mode = (value >> 7) & 0x01;
         apu->frame_irq_inhibit =(value >> 6) & 0x01;
@@ -58,7 +63,9 @@ uint8_t apu_read(APU* apu, uint16_t addr){
 
 void apu_step(APU* apu) {
     apu->cycle_count++;
-   if (apu->cycle_count == apu->frame_sequencer_next) {
+    pulse_step(&apu->pulse1);
+    pulse_step(&apu->pulse2);
+    if (apu->cycle_count == apu->frame_sequencer_next) {
         apu_update_frame_sequencer(apu);
     }
     apu->sample_timer += (1ULL << APU_FIXED_SHIFT);
@@ -100,17 +107,28 @@ void apu_update_frame_sequencer(APU* apu) {
 }
 
 void apu_output_sample(APU* apu) {
-    int pulse1_amp    = 8;   // placeholder
-    int pulse2_amp    = 8;   // placeholder
-    int triangle_amp  = 64;  // placeholder
-    int noise_amp     = 8;   // placeholder
-    int dmc_amp       = 8;   // placeholder
-    int pulses = pulse1_amp + pulse2_amp;  // 0..30 or so
-    int tnd    = triangle_amp + noise_amp + dmc_amp; 
-    int mixed = pulses * 200 + tnd * 40; 
-    if (mixed > 32767)  mixed = 32767;
-    if (mixed < -32768) mixed = -32768;
-    apu->sample_buffer[apu->sample_write_idx] = (int16_t)mixed;
-    apu->sample_write_idx = 
-      (apu->sample_write_idx + 1) % APU_SAMPLE_BUFFER_SIZE;
+    int pulse1_amp = pulse_get_output_amplitude(&apu->pulse1);
+    int pulse2_amp = pulse_get_output_amplitude(&apu->pulse2);
+    int triangle_amp = 0;
+    int noise_amp = 0;
+    int dmc_amp = 0;
+    // pulse
+    float pulse_out = 0.0f;
+    int pulse_sum = pulse1_amp + pulse2_amp;
+    if (pulse_sum > 0) {
+        pulse_out = 95.88f / ((8128.0f / pulse_sum) + 100.0f);
+    }
+    // triangle + noise + dmc
+    float tnd_out = 0.0f;
+    float tnd_sum = triangle_amp / 8227.0f +
+                    noise_amp    / 12241.0f +
+                    dmc_amp      / 22638.0f;
+    if (tnd_sum > 0.0f) {
+        tnd_out = 159.79f / (1.0f / tnd_sum + 100.0f);
+    }
+    //mixing
+    float mixed = pulse_out + tnd_out;
+    uint8_t sample = (uint8_t)(mixed * 127.5f + 0.5f); // 0.0→0, 1.0→127
+    sample += 128;
+    write_rb(&apu->sample_buffer, sample);
 }
