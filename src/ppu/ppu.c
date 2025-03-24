@@ -96,7 +96,7 @@ void ppu_register_write(PPU* ppu, uint16_t address, uint8_t value) {
             break;
         case 5:
             if (ppu->renderer.w == 0) {
-                ppu->renderer.x = value & 0x07;
+                ppu->renderer.t_x = value & 0x07;
                 ppu->renderer.t.coarse_x = (value >> 3) & 0x1F;
             } else {
                 ppu->renderer.t.fine_y = value & 0x07;

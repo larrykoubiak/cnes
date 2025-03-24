@@ -47,6 +47,7 @@ typedef struct Renderer {
     LOOPYRegister v;
     LOOPYRegister t;
     uint8_t x;
+    uint8_t t_x;
     uint8_t w;
     // temp BG variables
     uint8_t bg_next_tile_id;

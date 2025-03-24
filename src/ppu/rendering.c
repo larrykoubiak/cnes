@@ -315,6 +315,7 @@ void reset_hori(PPU* ppu){
     if(ppu->ppumask.BG_RENDER || ppu->ppumask.SP_RENDER) {
         renderer->v.nametable_x = renderer->t.nametable_x;
         renderer->v.coarse_x = renderer->t.coarse_x;
+        renderer->x = renderer->t_x;
     }
 }
 
