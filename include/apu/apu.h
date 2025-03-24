@@ -7,6 +7,13 @@
 #include "apu/noise.h"
 #include "apu/dmc.h"
 
+static const bool clock_length_sweep_4step[4] = {false, true, false, true};
+static const bool clock_length_sweep_5step[5] = {false, true, false, false, true};
+
+static const bool clock_envelope_4step[4] = {true, true, true, true};
+static const bool clock_envelope_5step[5] = {true, true, true, false, true};
+
+
 typedef struct APU {
     // registers
     PulseChannel pulse1;
@@ -15,11 +22,13 @@ typedef struct APU {
     NoiseChannel noise;
     DMCChannel dmc;
     uint8_t status;
-    uint8_t frame_counter;
+    uint8_t frame_mode;
+    bool frame_irq_inhibit;
     // counters
     uint64_t cycle_count;
     uint64_t frame_sequencer_next;
     uint8_t frame_step;
+    bool frame_irq_flag;
     // audio sampling
     int sample_rate;
     uint64_t sample_rate_step;

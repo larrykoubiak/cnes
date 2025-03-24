@@ -35,7 +35,17 @@ void apu_write(APU* apu, uint16_t addr, uint8_t value) {
     } else if(addr==0x15){
         apu->status = value;
     } else if(addr==0x17){
-        apu->frame_counter = value;
+        apu->frame_mode = (value >> 7) & 0x01;
+        apu->frame_irq_inhibit =(value >> 6) & 0x01;
+        if(apu->frame_irq_inhibit)
+            apu->frame_irq_flag = false;
+        apu->frame_step = 0;
+        if(apu->frame_mode == 1) {
+            apu->frame_sequencer_next = apu->cycle_count + 1;
+            apu_update_frame_sequencer(apu);
+        } else {
+            apu->frame_sequencer_next = apu->cycle_count + 7457;
+        }
     }
 }
 
@@ -59,10 +69,31 @@ void apu_step(APU* apu) {
 }
 
 void apu_update_frame_sequencer(APU* apu) {
+    bool is_5step = apu->frame_mode;
+    int step = apu->frame_step;    
+    bool clock_env   = is_5step ? clock_envelope_5step[step] : clock_envelope_4step[step];
+    bool clock_len   = is_5step ? clock_length_sweep_5step[step] : clock_length_sweep_4step[step];
+    if (clock_env) {
+        pulse_step_envelope(&apu->pulse1);
+        pulse_step_envelope(&apu->pulse2);
+        // TODO: triangle, noise envelope
+    }
+    if (clock_len) {
+        pulse_step_length(&apu->pulse1);
+        pulse_step_length(&apu->pulse2);
+        pulse_step_sweep(&apu->pulse1, true);
+        pulse_step_sweep(&apu->pulse2, false);
+        // TODO: triangle length, noise length, etc.
+    }
+    if (!is_5step && step == 3 && !apu->frame_irq_inhibit) {
+        apu->frame_irq_flag = true;
+    }
     apu->frame_step++;
-    if (apu->frame_step > 3) {
+    if ((!is_5step && apu->frame_step > 3) ||
+        ( is_5step && apu->frame_step > 4)) {
         apu->frame_step = 0;
-        apu->frame_sequencer_next = apu->cycle_count + 7457;
+        apu->frame_sequencer_next = is_5step ? UINT64_MAX
+                                                : apu->cycle_count + 7457;
     } else {
         apu->frame_sequencer_next += 7457;
     }
