@@ -2,6 +2,11 @@
 #include "frontend/sdl_context.h"
 
 void input_init(Input_Frontend* input) {
+    input->input_event_flags = 0;
+    input->prev_escape = false;
+    input->prev_p = false;
+    input->prev_s = false;
+    input->prev_d = false;
     // gamepad support
     int num_gamepads = 0;
     SDL_JoystickID* gamepads = SDL_GetGamepads(&num_gamepads);

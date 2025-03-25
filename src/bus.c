@@ -1,6 +1,6 @@
 #include "bus.h"
 
-int init_bus(Bus* bus, const char* filename) {
+int init_bus(Bus* bus, const char* filename, int sample_rate) {
     bus->cycles = 0;
     bus->dma_page = 0x00;
     bus->dma_address = 0x00;
@@ -12,6 +12,7 @@ int init_bus(Bus* bus, const char* filename) {
         return 1;
     }
     controller_init(&bus->controller);
+    apu_init(&bus->apu, sample_rate);
     cpu_init(&bus->cpu, bus);
     ppu_init(&bus->ppu, bus, bus->cart.mapper->get_mirroring(&bus->cart));
     memset(bus->ram,0, sizeof(bus->ram));

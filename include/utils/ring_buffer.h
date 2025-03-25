@@ -12,5 +12,5 @@ typedef struct {
 
 uint8_t read_rb(ring_buffer *rb);
 void write_rb(ring_buffer *rb, uint8_t value);
-
+int ring_buffer_fill(ring_buffer* rb);
 #endif

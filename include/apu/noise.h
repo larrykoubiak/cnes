@@ -3,6 +3,11 @@
 
 #include "apu/apu_bitfields.h"
 
+static const int noise_table[16] = {
+    4, 8, 16, 32, 64, 96, 128, 160, 
+    202, 254, 380, 508, 762, 1016, 2034, 4068
+};
+
 typedef struct {
     union {
         unsigned char raw[4];
