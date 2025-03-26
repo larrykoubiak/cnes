@@ -94,7 +94,7 @@ void pulse_step_length(PulseChannel *pch) {
 }
 
 int pulse_get_output_amplitude(const PulseChannel *pch) {
-    if (pch->length_counter == 0 || pch->sweep_mute || pch->timer_period < 8) {
+    if (!pch->enabled || pch->length_counter == 0 || pch->sweep_mute || pch->timer_period < 8) {
         return 0;
     }
     uint8_t duty_bit = duty_table[pch->reg.envelope.duty][pch->duty_index];

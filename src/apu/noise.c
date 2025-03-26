@@ -61,10 +61,7 @@ void noise_step_length(NoiseChannel* nch) {
 }
 
 int noise_get_output_amplitude(const NoiseChannel* nch) {
-    if (nch->length_counter == 0) {
-        return 0;
-    }
-    if (nch->timer_period < 8) {
+    if (!nch->enabled || nch->length_counter == 0) {
         return 0;
     }
     if (nch->shift_register & 1) {

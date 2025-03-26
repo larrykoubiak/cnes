@@ -10,6 +10,7 @@ void apu_init(APU* apu, int sample_rate) {
     apu->frame_irq_flag = false;
     apu->frame_step = 0;
     apu->frame_sequencer_next = apu->cycle_count + 7457;
+    apu->noise.shift_register = 1;
 }
 
 void apu_reset(APU* apu){
