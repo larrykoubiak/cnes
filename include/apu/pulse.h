@@ -36,7 +36,7 @@ typedef struct {
 } PulseChannel;
 
 void pulse_write(PulseChannel *pch, int reg_index, uint8_t value);
-
+void pulse_enable(PulseChannel *pch, bool enable);
 void pulse_step(PulseChannel *pch);
 void pulse_step_envelope(PulseChannel *pch);
 void pulse_step_sweep(PulseChannel *pch, bool is_pulse1);

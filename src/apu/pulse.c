@@ -18,11 +18,20 @@ void pulse_write(PulseChannel *pch, int reg_index, uint8_t value) {
             low  = pch->reg.raw[2];
             high = value & 0x07;
             pch->timer_period = (high << 8) | low;
-            uint8_t index = (value & 0xF8) >> 3;
-            pch->length_counter = length_table[index];
-            pch->duty_index = 0;
-            pch->envelope_start_flag = true;
+            pulse_enable(pch, pch->enabled);
             break;
+    }
+}
+
+void pulse_enable(PulseChannel *pch, bool enable) {
+    pch->enabled = enable;
+    if(enable) {
+        uint8_t index = pch->reg.timer.length_counter;
+        pch->length_counter = length_table[index];
+        pch->duty_index = 0;
+        pch->envelope_start_flag = true;
+    } else {
+        pch->length_counter = 0;
     }
 }
 
@@ -39,12 +48,12 @@ void pulse_step_envelope(PulseChannel *pch) {
     if (pch->envelope_start_flag) {
         pch->envelope_start_flag = false;
         pch->envelope_volume = 15;
-        pch->envelope_divider = pch->reg.envelope.volume;
+        pch->envelope_divider = pch->reg.envelope.volume + 1;
     } else {
         if (pch->envelope_divider > 0) {
             pch->envelope_divider--;
         } else {
-            pch->envelope_divider = pch->reg.envelope.volume;
+            pch->envelope_divider = pch->reg.envelope.volume + 1;
             if (pch->envelope_volume > 0) {
                 pch->envelope_volume--;
             } else if (pch->reg.envelope.loop_envelope) {

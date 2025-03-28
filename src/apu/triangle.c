@@ -53,7 +53,7 @@ void triangle_step_length(TriangleChannel *tch) {
 }
 
 int triangle_get_output_amplitude(const TriangleChannel *tch) {
-    if (!tch->enabled || tch->length_counter == 0 || tch->linear_counter == 0) {
+    if (!tch->enabled || tch->length_counter == 0 || tch->linear_counter == 0 || tch->timer_period < 2) {
         return 0;
     }
     return triangle_table[tch->sequence_index];

@@ -21,18 +21,18 @@ typedef struct APU {
     TriangleChannel triangle;
     NoiseChannel noise;
     DMCChannel dmc;
+
     uint8_t status;
     uint8_t frame_mode;
     bool frame_irq_inhibit;
     // counters
-    uint64_t cycle_count;
-    uint64_t frame_sequencer_next;
+    uint64_t frame_cycle_accumulator;
     uint8_t frame_step;
     bool frame_irq_flag;
     // audio sampling
-    int sample_rate;
-    uint64_t sample_rate_step;
-    uint64_t sample_timer;
+    uint64_t sample_cycle_accumulator;
+    // CPU cycle counter
+    uint64_t cycle_count;
     // buffer
     ring_buffer sample_buffer;
 } APU;

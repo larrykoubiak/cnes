@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
         while (!bus.ppu.vblank_triggered && !paused) {
             step(&bus);
             audio_cycle_counter++;
-            if (audio_cycle_counter >= 9375) {
+            if (audio_cycle_counter >= 89342) {
                 audio_update(&ctx.audio, &bus.apu.sample_buffer, paused);
                 audio_cycle_counter = 0;
             }
