@@ -7,27 +7,19 @@ int audio_init(Audio_Frontend* audio) {
     audio->spec.format   = SDL_AUDIO_U8;             // 8-bit unsigned
     audio->spec.channels = 1;                        // mono
     audio->stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &audio->spec,NULL, NULL);
-    audio->sample_rate_step = SAMPLE_TIME_NS;
-    audio->last_time_ns = 0;
     if (!audio->stream) {
         printf("SDL_OpenAudioDevice Error: %s\n", SDL_GetError());
         SDL_Quit();
         return -1;
     }
-    SDL_memset(audio->buffer, 128, 735);
+    SDL_memset(audio->buffer, 128, MAX_AUDIO_BUFFERED);
+    SDL_ResumeAudioStreamDevice(audio->stream);
     return 0; // or your existing return logic
 }
 
 void audio_update(Audio_Frontend* audio, ring_buffer* rb, bool paused) {
     int fill = ring_buffer_fill(rb);
-    uint64_t now = SDL_GetTicksNS();
-    if(audio->last_time_ns==0) {
-        SDL_ResumeAudioStreamDevice(audio->stream);
-        audio->last_time_ns = now;
-    }
-    uint64_t elapsed = (now - audio->last_time_ns);
-    int to_play = (int)(elapsed / audio->sample_rate_step);
-    int total = (fill < to_play ? fill : to_play);
+    int total = (fill < SAMPLES_PER_FRAME ? fill : SAMPLES_PER_FRAME);
     // int total = to_play;
     if (paused) {
         memset(audio->buffer, 128, total );
@@ -39,7 +31,6 @@ void audio_update(Audio_Frontend* audio, ring_buffer* rb, bool paused) {
         audio->buffer[i] = sample;
     }
     SDL_PutAudioStreamData(audio->stream, audio->buffer, total);
-    audio->last_time_ns = now;
 }
 
 int audio_cleanup(Audio_Frontend* audio) {
