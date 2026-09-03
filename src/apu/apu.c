@@ -1,29 +1,108 @@
-#include "bus.h"
+#include <stddef.h>
+#include <string.h>
 
-void apu_init(APU* apu, int sample_rate) {
+#include "apu/apu.h"
+#include "utils/constants.h"
+
+#define APU_FOUR_STEP_QUARTER_1 7457U
+#define APU_FOUR_STEP_HALF_1 14913U
+#define APU_FOUR_STEP_QUARTER_2 22371U
+#define APU_FOUR_STEP_IRQ_1 29828U
+#define APU_FOUR_STEP_HALF_2 29829U
+#define APU_FOUR_STEP_END 29830U
+
+#define APU_FIVE_STEP_QUARTER_1 7457U
+#define APU_FIVE_STEP_HALF_1 14913U
+#define APU_FIVE_STEP_QUARTER_2 22371U
+#define APU_FIVE_STEP_HALF_2 37281U
+#define APU_FIVE_STEP_END 37282U
+
+#define PI_F 3.14159265358979323846f
+
+static float high_pass_coefficient(float cutoff, uint32_t sample_rate) {
+    float dt = 1.0f / (float)sample_rate;
+    float rc = 1.0f / (2.0f * PI_F * cutoff);
+    return rc / (rc + dt);
+}
+
+static float low_pass_coefficient(float cutoff, uint32_t sample_rate) {
+    float dt = 1.0f / (float)sample_rate;
+    float rc = 1.0f / (2.0f * PI_F * cutoff);
+    return dt / (rc + dt);
+}
+
+static void apu_filter_init(APUFilter *filter, uint32_t sample_rate) {
+    memset(filter, 0, sizeof(*filter));
+    filter->high_pass_90_coefficient = high_pass_coefficient(90.0f, sample_rate);
+    filter->high_pass_440_coefficient = high_pass_coefficient(440.0f, sample_rate);
+    filter->low_pass_14000_coefficient = low_pass_coefficient(14000.0f, sample_rate);
+}
+
+static float high_pass(float input, float coefficient,
+                       float *previous_input, float *previous_output) {
+    float output = coefficient * (*previous_output + input - *previous_input);
+    *previous_input = input;
+    *previous_output = output;
+    return output;
+}
+
+static float apu_filter_sample(APUFilter *filter, float input) {
+    float output = high_pass(input, filter->high_pass_90_coefficient,
+                             &filter->high_pass_90_previous_input,
+                             &filter->high_pass_90_previous_output);
+    output = high_pass(output, filter->high_pass_440_coefficient,
+                       &filter->high_pass_440_previous_input,
+                       &filter->high_pass_440_previous_output);
+
+    filter->low_pass_14000_output += filter->low_pass_14000_coefficient *
+                                     (output - filter->low_pass_14000_output);
+    return filter->low_pass_14000_output;
+}
+
+static bool apu_apply_pending_frame_counter_write(APU *apu) {
+    if (apu->frame_reset_delay == 0) {
+        return false;
+    }
+
+    apu->frame_reset_delay--;
+    if (apu->frame_reset_delay != 0) {
+        return false;
+    }
+
+    apu->frame_mode = apu->pending_frame_mode;
+    apu->frame_cycle = 0;
+
+    if (apu->frame_mode != 0) {
+        // Five-step mode clocks both units when the delayed write takes effect.
+        apu_clock_quarter_frame(apu);
+        apu_clock_half_frame(apu);
+    }
+
+    return true;
+}
+
+void apu_init(APU *apu, int sample_rate) {
     memset(apu, 0, sizeof(*apu));
-    apu->sample_cycle_accumulator = 0;
-    apu->frame_mode = 0;  // default 4-step mode
-    apu->frame_irq_inhibit = 0;
-    apu->frame_irq_flag = false;
-    apu->frame_step = 0;
-    apu->frame_cycle_accumulator = 0;
-    apu->noise.shift_register = 1;
+    apu->sample_rate = sample_rate > 0 ? (uint32_t)sample_rate : SAMPLE_RATE;
+    noise_reset(&apu->noise);
+    apu_filter_init(&apu->filter, apu->sample_rate);
 }
 
-void apu_reset(APU* apu){
-    memset(apu, 0 , sizeof(APU));
+void apu_reset(APU *apu) {
+    uint32_t sample_rate = apu->sample_rate != 0 ? apu->sample_rate : SAMPLE_RATE;
+    apu_init(apu, (int)sample_rate);
 }
 
-void apu_write(APU* apu, uint16_t addr, uint8_t value) {
-    if(addr < 0x14) {
-        uint8_t channel_id = addr >> 2;
-        uint8_t field_id = addr & 0x03;
-        switch(channel_id) {
+void apu_write(APU *apu, uint16_t addr, uint8_t value) {
+    if (addr < 0x14U) {
+        uint8_t channel_id = (uint8_t)(addr >> 2);
+        uint8_t field_id = addr & 0x03U;
+
+        switch (channel_id) {
             case 0:
                 pulse_write(&apu->pulse1, field_id, value);
                 break;
-           case 1:
+            case 1:
                 pulse_write(&apu->pulse2, field_id, value);
                 break;
             case 2:
@@ -35,122 +114,196 @@ void apu_write(APU* apu, uint16_t addr, uint8_t value) {
             case 4:
                 dmc_write(&apu->dmc, field_id, value);
                 break;
-            }
-    } else if(addr==0x15){
-        apu->status = value;
-        // pulse_enable(&apu->pulse1, (value & 0x01) > 1);
-        // pulse_enable(&apu->pulse2, (value & 0x02) > 1);
-        apu->pulse1.enabled = value & 0x01;
-        apu->pulse2.enabled = value & 0x02;
-        apu->triangle.enabled = value & 0x04;
-        apu->noise.enabled = value & 0x08;
-        apu->dmc.enabled = value & 0x10;
-    } else if(addr==0x17){
-        apu->frame_mode = (value >> 7) & 0x01;
-        apu->frame_irq_inhibit =(value >> 6) & 0x01;
-        if(apu->frame_irq_inhibit)
-            apu->frame_irq_flag = false;
-        apu->frame_step = 0;
-        if(apu->frame_mode == 1) {
-            apu_update_frame_sequencer(apu);
-            apu->frame_cycle_accumulator = APU_FRAME_COUNTER_STEP1_SHIFTED;
-        } else {
-            apu->frame_cycle_accumulator = APU_FRAME_COUNTER_STEP1_SHIFTED;
+            default:
+                break;
         }
+        return;
+    }
+
+    if (addr == 0x15U) {
+        pulse_set_enabled(&apu->pulse1, (value & 0x01U) != 0);
+        pulse_set_enabled(&apu->pulse2, (value & 0x02U) != 0);
+        triangle_set_enabled(&apu->triangle, (value & 0x04U) != 0);
+        noise_set_enabled(&apu->noise, (value & 0x08U) != 0);
+
+        apu->dmc.enabled = (value & 0x10U) != 0;
+        if (!apu->dmc.enabled) {
+            apu->dmc.current_length = 0;
+        }
+        apu->dmc.irq_pending = false;
+        return;
+    }
+
+    if (addr == 0x17U) {
+        apu->pending_frame_mode = (value >> 7) & 0x01U;
+        apu->frame_irq_inhibit = (value & 0x40U) != 0;
+        if (apu->frame_irq_inhibit) {
+            apu->frame_irq_flag = false;
+        }
+
+        // The sequencer reset takes effect 3 or 4 CPU cycles after the write,
+        // depending on which CPU/APU phase the write lands on.
+        apu->frame_reset_delay = (apu->cycle_count & 1U) != 0 ? 4U : 3U;
     }
 }
 
-uint8_t apu_read(APU* apu, uint16_t addr){
-    if (addr == 0x15) {
-        return apu->status;
+uint8_t apu_read(APU *apu, uint16_t addr) {
+    if (addr != 0x15U) {
+        return 0;
     }
-    return 0;
+
+    uint8_t status = 0;
+    status |= apu->pulse1.length_counter > 0 ? 0x01U : 0;
+    status |= apu->pulse2.length_counter > 0 ? 0x02U : 0;
+    status |= apu->triangle.length_counter > 0 ? 0x04U : 0;
+    status |= apu->noise.length_counter > 0 ? 0x08U : 0;
+    status |= apu->dmc.current_length > 0 ? 0x10U : 0;
+    status |= apu->frame_irq_flag ? 0x40U : 0;
+    status |= apu->dmc.irq_pending ? 0x80U : 0;
+
+    apu->frame_irq_flag = false;
+    return status;
 }
 
-void apu_step(APU* apu) {
+void apu_clock_quarter_frame(APU *apu) {
+    pulse_step_envelope(&apu->pulse1);
+    pulse_step_envelope(&apu->pulse2);
+    triangle_step_linear(&apu->triangle);
+    noise_step_envelope(&apu->noise);
+}
+
+void apu_clock_half_frame(APU *apu) {
+    pulse_step_length(&apu->pulse1);
+    pulse_step_length(&apu->pulse2);
+    triangle_step_length(&apu->triangle);
+    noise_step_length(&apu->noise);
+    pulse_step_sweep(&apu->pulse1, true);
+    pulse_step_sweep(&apu->pulse2, false);
+}
+
+void apu_update_frame_sequencer(APU *apu) {
+    if (apu->frame_mode == 0) {
+        if (apu->frame_cycle >= APU_FOUR_STEP_IRQ_1 &&
+            apu->frame_cycle <= APU_FOUR_STEP_END &&
+            !apu->frame_irq_inhibit) {
+            apu->frame_irq_flag = true;
+        }
+
+        switch (apu->frame_cycle) {
+            case APU_FOUR_STEP_QUARTER_1:
+            case APU_FOUR_STEP_QUARTER_2:
+                apu_clock_quarter_frame(apu);
+                break;
+
+            case APU_FOUR_STEP_HALF_1:
+            case APU_FOUR_STEP_HALF_2:
+                apu_clock_quarter_frame(apu);
+                apu_clock_half_frame(apu);
+                break;
+
+            default:
+                break;
+        }
+
+        if (apu->frame_cycle >= APU_FOUR_STEP_END) {
+            apu->frame_cycle = 0;
+        }
+        return;
+    }
+
+    switch (apu->frame_cycle) {
+        case APU_FIVE_STEP_QUARTER_1:
+        case APU_FIVE_STEP_QUARTER_2:
+            apu_clock_quarter_frame(apu);
+            break;
+
+        case APU_FIVE_STEP_HALF_1:
+        case APU_FIVE_STEP_HALF_2:
+            apu_clock_quarter_frame(apu);
+            apu_clock_half_frame(apu);
+            break;
+
+        default:
+            break;
+    }
+
+    if (apu->frame_cycle >= APU_FIVE_STEP_END) {
+        apu->frame_cycle = 0;
+    }
+}
+
+float apu_mix(const APU *apu) {
+    uint8_t pulse1 = pulse_get_output_amplitude(&apu->pulse1);
+    uint8_t pulse2 = pulse_get_output_amplitude(&apu->pulse2);
+    uint8_t triangle = triangle_get_output_amplitude(&apu->triangle);
+    uint8_t noise = noise_get_output_amplitude(&apu->noise);
+    uint8_t dmc = dmc_get_output_amplitude(&apu->dmc);
+
+    float pulse_out = 0.0f;
+    uint8_t pulse_sum = pulse1 + pulse2;
+    if (pulse_sum > 0) {
+        pulse_out = 95.88f / ((8128.0f / (float)pulse_sum) + 100.0f);
+    }
+
+    float tnd_input = (float)triangle / 8227.0f +
+                      (float)noise / 12241.0f +
+                      (float)dmc / 22638.0f;
+    float tnd_out = 0.0f;
+    if (tnd_input > 0.0f) {
+        tnd_out = 159.79f / ((1.0f / tnd_input) + 100.0f);
+    }
+
+    return pulse_out + tnd_out;
+}
+
+void apu_output_sample(APU *apu) {
+    float averaged = apu->sample_sum_count > 0
+        ? (float)(apu->sample_sum / (double)apu->sample_sum_count)
+        : apu_mix(apu);
+
+    apu->sample_sum = 0.0;
+    apu->sample_sum_count = 0;
+
+    float filtered = apu_filter_sample(&apu->filter, averaged);
+    if (filtered > 1.0f) {
+        filtered = 1.0f;
+    } else if (filtered < -1.0f) {
+        filtered = -1.0f;
+    }
+
+    int16_t sample = filtered >= 0.0f
+        ? (int16_t)(filtered * 32767.0f)
+        : (int16_t)(filtered * 32768.0f);
+
+    (void)write_rb(&apu->sample_buffer, sample);
+    apu->output_sample_count++;
+}
+
+void apu_step(APU *apu) {
     apu->cycle_count++;
-    apu->frame_cycle_accumulator += (1 << AUDIO_FIXED_SHIFT);
-    apu->sample_cycle_accumulator += (1 << AUDIO_FIXED_SHIFT);
-    // timers
-    if((apu->cycle_count % 2)==1) {
+
+    // Triangle and noise timers run at the CPU clock. Pulse timers run at
+    // half the CPU clock. DMC is clocked here too, although sample fetching is
+    // still intentionally unimplemented.
+    triangle_step(&apu->triangle);
+    noise_step(&apu->noise);
+    dmc_step(&apu->dmc);
+    if ((apu->cycle_count & 1U) != 0) {
         pulse_step(&apu->pulse1);
         pulse_step(&apu->pulse2);
-        triangle_step(&apu->triangle);
-        noise_step(&apu->noise);    
     }
-    // frame counter
-    if(
-        (apu->frame_cycle_accumulator >= APU_FRAME_COUNTER_STEP1_SHIFTED && apu->frame_step == 0) ||
-        (apu->frame_cycle_accumulator >= APU_FRAME_COUNTER_STEP2_SHIFTED && apu->frame_step == 1) ||
-        (apu->frame_cycle_accumulator >= APU_FRAME_COUNTER_STEP3_SHIFTED && apu->frame_step == 2) ||
-        (apu->frame_cycle_accumulator >= APU_FRAME_COUNTER_STEP4_SHIFTED && apu->frame_step == 3) ||
-        (apu->frame_cycle_accumulator >= APU_FRAME_COUNTER_STEP5_SHIFTED && apu->frame_step == 4 && apu->frame_mode)
-    ) {
+
+    if (!apu_apply_pending_frame_counter_write(apu)) {
+        apu->frame_cycle++;
         apu_update_frame_sequencer(apu);
     }
-    if (apu->sample_cycle_accumulator >= CYCLES_PER_SAMPLE_SHIFTED) {
-        apu->sample_cycle_accumulator -= CYCLES_PER_SAMPLE_SHIFTED;
+
+    apu->sample_sum += apu_mix(apu);
+    apu->sample_sum_count++;
+    apu->sample_phase += (uint64_t)apu->sample_rate * NTSC_CPU_CLOCK_DENOMINATOR;
+
+    if (apu->sample_phase >= NTSC_CPU_CLOCK_NUMERATOR) {
+        apu->sample_phase -= NTSC_CPU_CLOCK_NUMERATOR;
         apu_output_sample(apu);
     }
-}
-
-void apu_update_frame_sequencer(APU* apu) {
-    bool is_5step = apu->frame_mode;
-    int step = apu->frame_step;
-    bool clock_env   = is_5step ? clock_envelope_5step[apu->frame_step] : clock_envelope_4step[step];
-    bool clock_len   = is_5step ? clock_length_sweep_5step[apu->frame_step] : clock_length_sweep_4step[step];
-    if (clock_env) {
-        pulse_step_envelope(&apu->pulse1);
-        pulse_step_envelope(&apu->pulse2);
-        triangle_step_linear(&apu->triangle);
-        noise_step_envelope(&apu->noise);
-    }
-    if (clock_len) {
-        pulse_step_length(&apu->pulse1);
-        pulse_step_length(&apu->pulse2);
-        pulse_step_sweep(&apu->pulse1, true);
-        pulse_step_sweep(&apu->pulse2, false);
-        triangle_step_length(&apu->triangle);
-        noise_step_length(&apu->noise);
-    }
-    if (!is_5step && step == 3 && !apu->frame_irq_inhibit) {
-        apu->frame_irq_flag = true;
-    }
-    apu->frame_step++;
-    if ((!is_5step && apu->frame_step > 3) ||
-        ( is_5step && apu->frame_step > 4)) {
-        apu->frame_step = 0;
-        apu->frame_cycle_accumulator -= is_5step ? APU_FRAME_COUNTER_STEP5_SHIFTED : APU_FRAME_COUNTER_STEP4_SHIFTED;
-    }
-}
-
-void apu_output_sample(APU* apu) {
-    int pulse1_amp = pulse_get_output_amplitude(&apu->pulse1);
-    int pulse2_amp = pulse_get_output_amplitude(&apu->pulse2);
-    int triangle_amp = triangle_get_output_amplitude(&apu->triangle);
-    int noise_amp = noise_get_output_amplitude(&apu->noise);
-    // int pulse1_amp = 0;
-    // int pulse2_amp = 0;
-    // int triangle_amp = 0;
-    // int noise_amp = 0;
-    int dmc_amp = 0;
-    // pulse
-    float pulse_out = 0.0f;
-    int pulse_sum = pulse1_amp + pulse2_amp;
-    if (pulse_sum > 0) {
-        pulse_out = 95.88f / ((8128.0f / pulse_sum) + 100.0f);
-    }
-    // triangle + noise + dmc
-    float tnd_out = 0.0f;
-    float tnd_sum = triangle_amp / 8227.0f +
-                    noise_amp    / 12241.0f +
-                    dmc_amp      / 22638.0f;
-    if (tnd_sum > 0.0f) {
-        tnd_out = 159.79f / (1.0f / tnd_sum + 100.0f);
-    } 
-    //mixing
-    float mixed = pulse_out + tnd_out;
-    uint8_t sample = (uint8_t)(mixed * 127.5); // 0.0→0, 1.0→127
-    sample += 128;
-    write_rb(&apu->sample_buffer, sample);
 }

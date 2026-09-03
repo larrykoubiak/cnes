@@ -4,6 +4,8 @@
 #include "cartridge/mapper/mapper_002.h"
 #include "cartridge/mapper/mapper_003.h"
 
+#include <stddef.h>
+
 Mapper* get_mapper(uint16_t mapper_id){
     switch(mapper_id) {
         case 0: return &MAPPER_000;

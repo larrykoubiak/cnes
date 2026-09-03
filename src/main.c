@@ -5,7 +5,7 @@ int init(Bus* bus, sdl_context* ctx, int argc, char *argv[]) {
         fprintf(stderr, "Usage: %s <romfile>\n", argv[0]);
         return 1;
     }
-    int result_bus = init_bus(bus, argv[1],44100);
+    int result_bus = init_bus(bus, argv[1], SAMPLE_RATE);
     if (result_bus != 0) {
         return result_bus;
     }
@@ -65,7 +65,6 @@ int main(int argc, char *argv[]) {
     bool running = true;
     bool paused = false;
     uint8_t events = 0;
-    int audio_cycle_counter = 0;
     uint64_t last_time_ns, fps_last_time;
     int fps_frame_count = 0;
     int current_fps = 0;
@@ -79,11 +78,6 @@ int main(int argc, char *argv[]) {
         // Loop for 1 frame or until paused
         while (!bus.ppu.vblank_triggered && !paused) {
             step(&bus);
-            audio_cycle_counter++;
-            if (audio_cycle_counter >= 89342) {
-                audio_update(&ctx.audio, &bus.apu.sample_buffer, paused);
-                audio_cycle_counter = 0;
-            }
         }
         // Process events
         events = sdl_update(&ctx, &bus.controller.controller_state[0]);
@@ -96,6 +90,7 @@ int main(int argc, char *argv[]) {
         if (events & EVENT_DUMP) {
             save_disassembly_cache();
         }
+        audio_update(&ctx.audio, &bus.apu.sample_buffer, paused);
         // End of frame events
         if(paused)
         {

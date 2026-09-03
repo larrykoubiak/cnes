@@ -6,7 +6,10 @@ int sdl_init(sdl_context *ctx, uint8_t *colors, int width, int height, const cha
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return -1;
     }
-    audio_init(&ctx->audio);
+    if (audio_init(&ctx->audio) != 0) {
+        SDL_Quit();
+        return -1;
+    }
     input_init(&ctx->input);
     video_init(&ctx->video, width, height, title);
     text_init(&ctx->text, ctx->video.disasm_surface);

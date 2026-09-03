@@ -1,23 +1,13 @@
 #ifndef NOISE_CHANNEL_H
 #define NOISE_CHANNEL_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include "apu/apu_bitfields.h"
 
-static const int noise_table[16] = {
-    4, 8, 16, 32, 64, 96, 128, 160, 
-    202, 254, 380, 508, 762, 1016, 2034, 4068
-};
-
 typedef struct {
-    union {
-        unsigned char raw[4];
-        struct {
-            Envelope envelope;
-            unsigned char unused;
-            NoisePeriod period;
-        };
-    } reg;
-    bool     enabled;
+    uint8_t reg[4];
+    bool enabled;
 
     uint16_t timer_counter;
     uint16_t timer_period;
@@ -31,12 +21,14 @@ typedef struct {
     uint8_t  length_counter;
 } NoiseChannel;
 
+void noise_reset(NoiseChannel *nch);
 void noise_write(NoiseChannel* nch, int reg_index, uint8_t value);
+void noise_set_enabled(NoiseChannel *nch, bool enabled);
 
 void noise_step(NoiseChannel* nch);
 void noise_step_envelope(NoiseChannel* nch);
 void noise_step_length(NoiseChannel* nch);
 
-int noise_get_output_amplitude(const NoiseChannel* nch);
+uint8_t noise_get_output_amplitude(const NoiseChannel* nch);
 
 #endif

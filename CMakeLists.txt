@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.30)
 project(cnes C)
 
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
 # Default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
@@ -66,17 +70,34 @@ add_executable(${PROJECT_NAME} ${CNES_SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
 
-set(SDL3_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl-build/SDL3.dll")
-set(SDL3_TTF_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl_ttf-build/SDL3_ttf.dll")
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(cnes_apu_tests
+        tests/apu_tests.c
+        src/apu/apu.c
+        src/apu/pulse.c
+        src/apu/triangle.c
+        src/apu/noise.c
+        src/apu/dmc.c
+        src/utils/ring_buffer.c
+    )
+    target_include_directories(cnes_apu_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    add_test(NAME apu_core COMMAND cnes_apu_tests)
+endif()
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${SDL3_DLL_PATH} ${CMAKE_BINARY_DIR}/SDL3.dll
-)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${SDL3_TTF_DLL_PATH} ${CMAKE_BINARY_DIR}/SDL3_ttf.dll
-)
+if(WIN32)
+    set(SDL3_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl-build/SDL3.dll")
+    set(SDL3_TTF_DLL_PATH "${CMAKE_BINARY_DIR}/_deps/sdl_ttf-build/SDL3_ttf.dll")
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${SDL3_DLL_PATH} ${CMAKE_BINARY_DIR}/SDL3.dll
+    )
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${SDL3_TTF_DLL_PATH} ${CMAKE_BINARY_DIR}/SDL3_ttf.dll
+    )
+endif()
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy
